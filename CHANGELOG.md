@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.4.0
+
+- Fixed profile `serve.lmd_whisper_model` to properly expand tilde (`~`) in paths before passing to whisper-cli, allowing paths like `~/.aida/jarvis/models/ggml-small.en.bin` to work as documented.
+
 ## v1.3.0
 
 - `stt.Whisper.Transcribe` now auto-sizes whisper.cpp's `-ac`/`--audio-ctx` flag from each clip's own duration instead of always encoding the full 30-second window, cutting transcription time on CPU-only hosts (measured 8.0s to 3.3s for a 3s clip on a 2-core Pentium); override via the new `AudioCtx` field (`-1` for full context, a positive value for a fixed override).
