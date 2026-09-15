@@ -1,0 +1,32 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    call_sign: Aida
+    description: Chief of staff and front door.
+    profiles: []
+
+  product-manager:
+    kind: subagent
+    call_sign: Pamela
+    aliases: [pam, "the product manager"]
+    description: Product strategy and roadmap planning.
+    profiles: [work]
+    subagent:
+      dir: testdata/stub
+
+  devops:
+    kind: subagent
+    call_sign: Devin
+    aliases: [dev ops]
+    description: Infrastructure and deploys.
+    profiles: [work]
+    subagent:
+      dir: testdata/stub
+
+  handbook:
+    kind: source
+    description: Company handbook and policy lookup.
+    profiles: [work]
+    source:
+      source: handbook

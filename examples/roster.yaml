@@ -1,0 +1,93 @@
+# Example roster for Aida's dispatcher. Copy to ~/.aida/roster.yaml and edit.
+#
+# Aida (the front door) routes a request to one or more of these call-signs by
+# voice ("hey aida, ask the pilot to ...") or CLI (`aida ask ...`). Each entry
+# is a call-sign mapped to a backend. Profiles scope who is visible: the home
+# profile sees personal agents, a work profile would see a team; the reserved
+# `aida` entry is present in every profile.
+#
+# Validate with: aida roster lint
+# Inspect with:  aida roster list  (or --all for every profile)
+#
+# See CLAUDE.md, "Aida dispatcher + agent roster", for the full design.
+
+version: 1
+entries:
+  # The reserved orchestrator. kind: aida is never a dispatch target; this row
+  # only carries her metadata so `aida roster list` shows the whole team.
+  aida:
+    kind: aida
+    call_sign: Aida
+    description: >
+      Chief of staff and front door. Routes any request to the right roster
+      entry, fans out across several, spawns background jobs, aggregates.
+    profiles: []            # empty = present in every profile
+
+  # A discovered team, live from a repo's own agent personas, so a growing
+  # team never goes stale. One entry expands into one call-sign per persona
+  # in the .claude/agents dir; call-signs come from the org chart.
+  avengers-team:
+    kind: subagent
+    discover: ~/dev/avengers-hq/.claude/agents
+    call_signs_from: ~/dev/avengers-hq/org-chart.md
+    profiles: [work]
+    subagent:
+      dir: ~/dev/avengers-hq
+
+  # An explicit per-agent OVERRIDE is optional: same name as a discovered
+  # agent, used only to pin aliases/skills the frontmatter cannot express.
+  # quartermaster:
+  #   kind: subagent
+  #   call_sign: Stark
+  #   aliases: [stark, the quartermaster]
+  #   skills: [inventory, requisitions, gear]
+  #   profiles: [work]
+  #   subagent:
+  #     dir: ~/dev/avengers-hq
+  #     agent: quartermaster
+
+  # A source-backed call-sign: no persona, just a friendly front for an
+  # existing aida library source. "what's on the training schedule?" routes
+  # here.
+  training:
+    kind: source
+    call_sign: Coach
+    aliases: [coach, trainer]
+    description: >
+      Personal training log: workouts, sleep, recovery, nutrition logging.
+      Backed by the training library source.
+    skills: [fitness, nutrition, sleep, food-logging]
+    profiles: [home]
+    source:
+      source: training
+
+  finances:
+    kind: source
+    call_sign: Ledger
+    aliases: [budget, money, spending]
+    description: How the budget is doing - balances, spending, categories.
+    skills: [budget, spending, finances]
+    profiles: [home]
+    source:
+      source: finances
+
+  # An MCP-backed call-sign: zero-ceremony access to a discovered MCP tool.
+  headlines:
+    kind: mcp
+    description: Today's top headlines via a news MCP server.
+    skills: [news, headlines]
+    profiles: []
+    mcp:
+      server: nytimes
+      tool: nyt_top_stories
+
+  # An always-background call-sign: open-ended deep work that reports back via
+  # the jobs notifier on next wake.
+  investigator:
+    kind: job
+    call_sign: Sherlock
+    description: Open-ended background investigation; reports back when done.
+    mode: async
+    profiles: []
+    job:
+      kind: investigate

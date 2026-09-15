@@ -1,0 +1,21 @@
+# Fictional expected-source table for examples/golden/questions.txt, in the
+# shape cmd/golden-log reads (see cmd/golden-log/main.go's `expectation`
+# type). Order matches questions.txt, 1-indexed.
+#
+# expected: the canonical source name we want routing to pick.
+# acceptable: alternates that would also be considered correct (empty for most).
+- q: 1
+  expected: codebase-example
+  acceptable: []
+- q: 2
+  expected: codebase-example
+  acceptable: []
+- q: 3
+  expected: docs-example
+  acceptable: []
+- q: 4
+  expected: docs-example
+  acceptable: []
+- q: 5
+  expected: exec-example
+  acceptable: []

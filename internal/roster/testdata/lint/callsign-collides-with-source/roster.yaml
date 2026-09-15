@@ -1,0 +1,14 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    profiles: []
+
+  trainer:
+    kind: subagent
+    call_sign: workouts
+    description: Call-sign happens to match a real library source name.
+    profiles: [home]
+    subagent:
+      dir: testdata/lint/callsign-collides-with-source/dir
+      agent: trainer

@@ -1,0 +1,36 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    call_sign: Aida
+    description: Chief of staff and front door.
+
+  workouts:
+    kind: source
+    call_sign: Coach
+    aliases: [coach, trainer]
+    description: Personal trainer and nutrition coach. Tracks workouts and macros.
+    source:
+      source: workouts
+
+  product-manager:
+    kind: subagent
+    call_sign: Pamela
+    aliases: [pam]
+    description: Product strategy and roadmap planning.
+    subagent:
+      dir: testdata/stub
+
+  helper-a:
+    kind: source
+    aliases: [helper]
+    description: Ambiguous fixture A, never actually dispatched to in tests.
+    source:
+      source: helper-a
+
+  helper-b:
+    kind: source
+    aliases: [helper]
+    description: Ambiguous fixture B, never actually dispatched to in tests.
+    source:
+      source: helper-b

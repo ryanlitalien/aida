@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dinner Menu</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#0B1220">
+<meta name="apple-mobile-web-app-title" content="Dinner">
+<style>
+  :root {
+    --bg: #fff8ef;
+    --card: #ffffff;
+    --fg: #3a2b1f;
+    --muted: #8a7362;
+    --border: #f0dfc9;
+    --accent: #d9772a;
+    --accent-dark: #b85e1a;
+    --today-bg: #fff1dc;
+    --today-border: #f0a94e;
+    --kid-bg: #fde8e0;
+    --kid-fg: #b3401f;
+    --selected-bg: #fdeed9;
+    --selected-border: var(--accent);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 16px 8px;
+  }
+  h1 {
+    font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--muted);
+    letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  nav a { color: var(--accent-dark); text-decoration: none; font-weight: 550; font-size: 13px; }
+  nav a.active { color: var(--fg); cursor: default; }
+
+  main { max-width: 640px; margin: 0 auto; padding: 16px; padding-bottom: 48px; }
+  @media (min-width: 900px) {
+    main { max-width: 1100px; }
+  }
+
+  .tonight {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 10px rgba(150, 100, 40, 0.06);
+    text-align: center;
+  }
+  .tonight-header {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .tonight .label {
+    font-size: 13px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.08em; font-weight: 600;
+  }
+  .tonight .name {
+    font-size: 34px; font-weight: 800; line-height: 1.15; color: var(--fg);
+    margin: 4px 0 10px;
+  }
+  .kid-pill {
+    display: inline-block; background: var(--kid-bg); color: var(--kid-fg);
+    font-weight: 700; font-size: 12.5px; padding: 4px 12px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .kid-pill.small {
+    font-size: 8.5px; padding: 2px 6px; margin-top: 5px; white-space: normal;
+  }
+  .kid-version {
+    color: var(--muted); font-size: 15px; margin: -4px 0 8px;
+  }
+  .note {
+    color: var(--muted); font-size: 13px; margin-top: 10px; font-style: italic;
+  }
+
+  .prep-radar {
+    background: var(--today-bg);
+    border: 1px solid var(--today-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .prep-radar-header {
+    font-size: 12.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--accent-dark); margin-bottom: 8px;
+  }
+  .prep-radar-list { list-style: none; margin: 0; padding: 0; }
+  .prep-radar-list li { margin-bottom: 10px; }
+  .prep-radar-list li:last-child { margin-bottom: 0; }
+  .prep-radar-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); margin-bottom: 2px;
+  }
+  .prep-radar-step { font-size: 14px; color: var(--fg); }
+
+  .week-meta {
+    text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 14px;
+  }
+  .week-meta .week-badge {
+    display: inline-block; background: var(--accent); color: #fff;
+    font-weight: 700; padding: 1px 8px; border-radius: 6px; margin-right: 6px;
+    font-size: 11.5px; vertical-align: middle;
+  }
+
+  /* ------------------------------------------------------------- columns
+     Three columns on desktop (>= 900px): a narrow vertical day list, a
+     middle meal-picker column, and a right recipe/detail column. Below
+     900px only one panel is visible at a time -- the one named by the
+     "cols" element's data-mobile-panel attribute -- and a back link
+     drills back up a level. */
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  @media (min-width: 900px) {
+    .cols { grid-template-columns: 240px 1fr 1.2fr; align-items: start; }
+  }
+  .col {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px;
+  }
+  @media (max-width: 899px) {
+    .col-days, .col-meals, .col-detail { display: none; }
+    .cols[data-mobile-panel="days"] .col-days { display: block; }
+    .cols[data-mobile-panel="meals"] .col-meals { display: block; }
+    .cols[data-mobile-panel="detail"] .col-detail { display: block; }
+  }
+
+  .back-link {
+    display: none;
+    color: var(--accent-dark); text-decoration: none; font-weight: 600;
+    font-size: 13px; margin-bottom: 10px;
+  }
+  @media (max-width: 899px) {
+    .back-link.shown { display: inline-block; }
+  }
+
+  .day-list { display: flex; flex-direction: column; gap: 6px; }
+  @media (min-width: 900px) {
+    .day-list { flex-direction: column; }
+  }
+  .day-row {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 10px; cursor: pointer; background: var(--bg);
+    text-align: left; width: 100%;
+  }
+  .day-row.today { border-color: var(--today-border); background: var(--today-bg); }
+  .day-row.selected { border-color: var(--selected-border); background: var(--selected-bg); border-width: 2px; padding: 7px 9px; }
+  .day-row .day-main { flex: 1; min-width: 0; }
+  .day-row .dow { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .day-row.today .dow, .day-row.selected .dow { color: var(--accent-dark); }
+  .day-row .date { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .day-row .dname { font-size: 13px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+
+  .placeholder {
+    color: var(--muted); text-align: center; padding: 30px 10px; font-size: 14px;
+  }
+
+  .meal-cards { display: flex; flex-direction: column; gap: 10px; }
+  .meal-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px;
+    cursor: pointer; background: var(--bg); text-align: left; width: 100%;
+  }
+  .meal-card.selected { border-color: var(--selected-border); border-width: 2px; background: var(--selected-bg); padding: 9px 11px; }
+  .meal-card .slot-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .meal-card .meal-name { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .meal-card .meal-totals { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  .detail-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+  .detail-meta { font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; margin-bottom: 10px; }
+  .detail h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 16px 0 6px; }
+  .detail h3:first-of-type { margin-top: 10px; }
+  .ingredient-item { font-size: 14px; margin-bottom: 6px; }
+  .ingredient-macro { color: var(--muted); font-size: 12px; display: block; }
+  .detail-totals { font-size: 13.5px; margin-top: 4px; color: var(--fg); }
+  .detail-prep { margin-top: 12px; padding: 10px 12px; background: var(--today-bg); border-radius: 10px; font-size: 13.5px; }
+  .prep-ahead-item .prep-ahead-when {
+    color: var(--muted); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.04em; font-weight: 700; display: block; margin-bottom: 1px;
+  }
+
+  details {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 14px; padding: 4px 16px;
+  }
+  summary {
+    font-weight: 700; font-size: 16px; padding: 12px 0; cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "\25B8"; display: inline-block; margin-right: 8px; color: var(--accent); transition: transform 0.15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .section-body { padding-bottom: 14px; }
+  ul.plain { margin: 0; padding-left: 20px; }
+  ul.plain li { margin-bottom: 6px; font-size: 14px; }
+  ol.steps { margin: 0; padding-left: 20px; }
+  ol.steps li { margin-bottom: 10px; font-size: 14px; }
+  .thursday-rule { margin-top: 10px; padding: 10px 12px; background: var(--today-bg); border-radius: 10px; font-size: 13.5px; }
+  .kid-rules-name {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); margin: 14px 0 6px; font-weight: 700;
+  }
+  .kid-rules-name:first-child { margin-top: 0; }
+
+  .grocery-header { font-size: 15.5px; font-weight: 700; margin-bottom: 12px; }
+  .grocery-header.over { color: var(--kid-fg); }
+  .grocery-header.ok { color: #2f7a3d; }
+  .grocery-section { margin-bottom: 16px; }
+  .grocery-section h3 {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); margin: 0 0 6px; font-weight: 700;
+  }
+  table.grocery-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.grocery-table td { padding: 4px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.grocery-table td.qty { color: var(--muted); font-size: 12.5px; white-space: nowrap; padding-left: 10px; }
+  table.grocery-table td.price { text-align: right; white-space: nowrap; font-weight: 600; padding-left: 10px; }
+  .grocery-subtotal { text-align: right; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .grocery-block { margin-top: 16px; }
+  .grocery-block h3 {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); margin: 0 0 6px; font-weight: 700;
+  }
+  ul.grocery-list { margin: 0; padding-left: 20px; color: var(--muted); }
+  ul.grocery-list li { margin-bottom: 5px; font-size: 13.5px; }
+  ul.grocery-list .note { font-style: italic; }
+  .grocery-pantry { margin-top: 16px; }
+  .grocery-pantry summary { font-size: 13.5px; padding: 8px 0; }
+  .grocery-pantry-total { font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+  .grocery-footer {
+    margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--muted);
+  }
+
+  .error-box {
+    background: #fde8e0; color: var(--kid-fg); border: 1px solid #f0a94e;
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px;
+  }
+  .loading { text-align: center; color: var(--muted); padding: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dinner Menu</h1>
+  <nav id="site-nav">
+    <a href="/">Jarvis</a> &middot;
+    <a href="/tasks">Tasks</a> &middot;
+    <a href="/runs">Runs</a> &middot;
+    <a href="/dashboard">Dashboard</a> &middot;
+    <a href="/bifrost">Bifrost</a> &middot;
+    <a class="active">Menu</a> &middot;
+    <a href="/habits">Habits</a>
+  </nav>
+</header>
+<main>
+  <div id="error" hidden class="error-box"></div>
+  <div id="loading" class="loading">Loading tonight's dinner...</div>
+  <div id="content" hidden>
+
+    <div class="tonight">
+      <div class="tonight-header">
+        <span class="label">Tonight</span>
+        <span id="tonight-pill-slot"></span>
+      </div>
+      <div class="name" id="tonight-name">-</div>
+      <div id="tonight-kid-version" class="kid-version" hidden></div>
+      <div id="tonight-note" class="note" hidden></div>
+    </div>
+
+    <div id="prep-radar" class="prep-radar" hidden>
+      <div class="prep-radar-header">Prep radar</div>
+      <ul class="prep-radar-list" id="prep-radar-list"></ul>
+    </div>
+
+    <div class="week-meta">
+      <span class="week-badge" id="week-label">-</span>
+      <span id="week-range"></span>
+    </div>
+
+    <div class="cols" id="cols" data-mobile-panel="days">
+      <div class="col col-days">
+        <div class="day-list" id="day-list"></div>
+      </div>
+
+      <div class="col col-meals">
+        <a href="#" class="back-link" id="back-to-days" data-action="back-to-days">&lsaquo; Days</a>
+        <div id="meals-content"><div class="placeholder">Pick a day</div></div>
+      </div>
+
+      <div class="col col-detail">
+        <a href="#" class="back-link" id="back-to-meals" data-action="back-to-meals">&lsaquo; Meals</a>
+        <div id="detail-content"><div class="placeholder">Pick a meal</div></div>
+      </div>
+    </div>
+
+    <details id="shopping-list">
+      <summary>Shopping list</summary>
+      <div class="section-body">
+        <div class="grocery-header" id="grocery-header"></div>
+        <div id="grocery-sections"></div>
+
+        <div class="grocery-block">
+          <h3>Restock when out</h3>
+          <ul class="grocery-list" id="grocery-restock"></ul>
+        </div>
+
+        <div class="grocery-block">
+          <h3>Trip items (Ryan grabs these separately)</h3>
+          <ul class="grocery-list" id="grocery-trip"></ul>
+        </div>
+
+        <details class="grocery-pantry">
+          <summary>Monthly pantry (first order of the month)</summary>
+          <div class="section-body">
+            <div class="grocery-pantry-total" id="grocery-pantry-total"></div>
+            <table class="grocery-table" id="grocery-pantry-table"></table>
+          </div>
+        </details>
+
+        <div class="grocery-footer">
+          Changes? Tell Mack: "hey aida, ask mack to update the order" or <code>aida ask mack "..."</code>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Sunday cook</summary>
+      <div class="section-body">
+        <ol class="steps" id="sunday-cook-steps"></ol>
+        <div class="thursday-rule" id="thursday-rule"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Kids weekend food</summary>
+      <div class="section-body">
+        <ul class="plain" id="kids-weekend-food"></ul>
+      </div>
+    </details>
+
+    <details id="kid-rules-details" hidden>
+      <summary>Kid rules</summary>
+      <div class="section-body" id="kid-rules-body"></div>
+    </details>
+
+  </div>
+</main>
+<script>
+(function () {
+  var DOW_LABEL = {sun: "Sun", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat"};
+  var SLOT_LABEL = {breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack"};
+
+  // menuData holds the last-fetched /api/menu response; selection holds
+  // the currently drilled-into day key and meal slot (both null until the
+  // user clicks something -- no auto-select of today).
+  var menuData = null;
+  var selection = { day: null, slot: null };
+
+  function esc(s) {
+    var d = document.createElement("div");
+    d.textContent = (s === undefined || s === null) ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  // kidsPillText renders the kids-night pill text from /api/menu's
+  // top-level "kids" name list (e.g. ["Jack", "Mia"] -> "Jack & Mia").
+  function kidsPillText(kids) {
+    return (kids || []).join(" & ");
+  }
+
+  function makeKidPill(text, small) {
+    var pill = document.createElement("span");
+    pill.className = small ? "kid-pill small" : "kid-pill";
+    pill.textContent = text || "Kids night";
+    return pill;
+  }
+
+  function showError(msg) {
+    var el = document.getElementById("error");
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function clearError() {
+    document.getElementById("error").hidden = true;
+  }
+
+  function findDay(data, dayKey) {
+    var days = data.days || [];
+    for (var i = 0; i < days.length; i++) {
+      if (days[i].day === dayKey) { return days[i]; }
+    }
+    return null;
+  }
+
+  function findMeal(day, slot) {
+    var meals = (day && day.meals) || [];
+    for (var i = 0; i < meals.length; i++) {
+      if (meals[i].slot === slot) { return meals[i]; }
+    }
+    return null;
+  }
+
+  function mealTotalsLine(totals) {
+    totals = totals || {};
+    var cal = totals.cal || 0;
+    var p = totals.p || 0;
+    return cal + " cal · " + p + "g protein";
+  }
+
+  function setMobilePanel(panel) {
+    document.getElementById("cols").setAttribute("data-mobile-panel", panel);
+  }
+
+  // prepWhenLabel maps a prep_ahead/prep_today "when" value to its display
+  // label for the detail-column "Prep ahead" block (sunday-cook,
+  // night-before, morning-of, before-dinner).
+  function prepWhenLabel(when) {
+    switch (when) {
+      case "sunday-cook": return "Sunday cook";
+      case "night-before": return "Night before";
+      case "morning-of": return "Morning of";
+      case "before-dinner": return "Before dinner";
+      default: return when || "";
+    }
+  }
+
+  // ------------------------------------------------------------- render
+
+  function renderTonight(data) {
+    var today = null;
+    for (var i = 0; i < (data.days || []).length; i++) {
+      if (data.days[i].is_today) { today = data.days[i]; break; }
+    }
+    if (!today && data.days && data.days.length) {
+      today = data.days[0];
+    }
+
+    var kidsLabel = kidsPillText(data.kids);
+    var tonightName = document.getElementById("tonight-name");
+    var tonightPillSlot = document.getElementById("tonight-pill-slot");
+    var tonightKidVersion = document.getElementById("tonight-kid-version");
+    var tonightNote = document.getElementById("tonight-note");
+
+    if (today) {
+      var dinner = today.dinner || {};
+      tonightName.textContent = dinner.name || "(no dinner planned)";
+      tonightPillSlot.innerHTML = "";
+      if (dinner.kids) {
+        tonightPillSlot.appendChild(makeKidPill(kidsLabel, false));
+      }
+      if (dinner.kid_version) {
+        tonightKidVersion.textContent = dinner.kid_version;
+        tonightKidVersion.hidden = false;
+      } else {
+        tonightKidVersion.hidden = true;
+      }
+      if (dinner.note) {
+        tonightNote.textContent = dinner.note;
+        tonightNote.hidden = false;
+      } else {
+        tonightNote.hidden = true;
+      }
+    } else {
+      tonightName.textContent = "(no data)";
+      tonightPillSlot.innerHTML = "";
+      tonightKidVersion.hidden = true;
+      tonightNote.hidden = true;
+    }
+
+    document.getElementById("week-label").textContent = "Week " + (data.week || "?");
+    document.getElementById("week-range").textContent =
+      (data.week_start || "") + " – " + (data.week_end || "");
+  }
+
+  // renderPrepRadar shows the amber "prep radar" strip when prep_today is
+  // non-empty (today's own morning-of/before-dinner steps, tomorrow's
+  // night-before steps, and, on Sundays, the coming week's sunday-cook
+  // steps) -- and renders nothing at all when it's empty, so a day with
+  // nothing to prep doesn't show an empty box.
+  function renderPrepRadar(data) {
+    var box = document.getElementById("prep-radar");
+    var list = document.getElementById("prep-radar-list");
+    var items = data.prep_today || [];
+
+    list.innerHTML = "";
+    if (!items.length) {
+      box.hidden = true;
+      return;
+    }
+
+    items.forEach(function (item) {
+      var li = document.createElement("li");
+
+      var label = document.createElement("div");
+      label.className = "prep-radar-label";
+      if (item.when === "sunday-cook") {
+        label.textContent = "Sunday cook";
+      } else if (item.when === "night-before") {
+        label.textContent = "for tomorrow: " + (item.dinner || "");
+      } else {
+        label.textContent = "for tonight";
+      }
+      li.appendChild(label);
+
+      var step = document.createElement("div");
+      step.className = "prep-radar-step";
+      step.textContent = item.step || "";
+      li.appendChild(step);
+
+      list.appendChild(li);
+    });
+    box.hidden = false;
+  }
+
+  function renderDayList(data) {
+    var kidsLabel = kidsPillText(data.kids);
+    var list = document.getElementById("day-list");
+    list.innerHTML = "";
+    (data.days || []).forEach(function (day) {
+      var row = document.createElement("button");
+      row.type = "button";
+      var cls = "day-row";
+      if (day.is_today) { cls += " today"; }
+      if (selection.day === day.day) { cls += " selected"; }
+      row.className = cls;
+
+      var main = document.createElement("div");
+      main.className = "day-main";
+
+      var dow = document.createElement("div");
+      dow.className = "dow";
+      dow.textContent = (DOW_LABEL[day.day] || day.day) + " · " + (day.date || "");
+      main.appendChild(dow);
+
+      var dname = document.createElement("div");
+      dname.className = "dname";
+      dname.textContent = (day.dinner && day.dinner.name) || "";
+      main.appendChild(dname);
+
+      row.appendChild(main);
+
+      if (day.dinner && day.dinner.kids) {
+        row.appendChild(makeKidPill(kidsLabel, true));
+      }
+
+      row.addEventListener("click", function (dayKey) {
+        return function () {
+          selection.day = dayKey;
+          selection.slot = null;
+          setMobilePanel("meals");
+          renderAll();
+        };
+      }(day.day));
+
+      list.appendChild(row);
+    });
+  }
+
+  function renderMealsColumn(data) {
+    var container = document.getElementById("meals-content");
+    var backLink = document.getElementById("back-to-days");
+
+    var day = selection.day ? findDay(data, selection.day) : null;
+    if (!day) {
+      backLink.className = "back-link";
+      container.innerHTML = "";
+      var ph = document.createElement("div");
+      ph.className = "placeholder";
+      ph.textContent = "Pick a day";
+      container.appendChild(ph);
+      return;
+    }
+
+    backLink.className = "back-link shown";
+
+    var kidsLabel = kidsPillText(data.kids);
+    var wrap = document.createElement("div");
+    wrap.className = "meal-cards";
+
+    (day.meals || []).forEach(function (meal) {
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "meal-card" + (selection.slot === meal.slot ? " selected" : "");
+
+      var label = document.createElement("div");
+      label.className = "slot-label";
+      label.textContent = SLOT_LABEL[meal.slot] || meal.slot;
+      card.appendChild(label);
+
+      var nameRow = document.createElement("div");
+      nameRow.style.display = "flex";
+      nameRow.style.alignItems = "center";
+      nameRow.style.gap = "8px";
+
+      var name = document.createElement("span");
+      name.className = "meal-name";
+      name.textContent = meal.name || "-";
+      nameRow.appendChild(name);
+
+      if (meal.kids) {
+        nameRow.appendChild(makeKidPill(kidsLabel, true));
+      }
+      card.appendChild(nameRow);
+
+      var totals = document.createElement("div");
+      totals.className = "meal-totals";
+      totals.textContent = mealTotalsLine(meal.totals);
+      card.appendChild(totals);
+
+      card.addEventListener("click", function (slot) {
+        return function () {
+          selection.slot = slot;
+          setMobilePanel("detail");
+          renderAll();
+        };
+      }(meal.slot));
+
+      wrap.appendChild(card);
+    });
+
+    container.innerHTML = "";
+    container.appendChild(wrap);
+  }
+
+  function renderDetailColumn(data) {
+    var container = document.getElementById("detail-content");
+    var backLink = document.getElementById("back-to-meals");
+
+    var day = selection.day ? findDay(data, selection.day) : null;
+    var meal = (day && selection.slot) ? findMeal(day, selection.slot) : null;
+
+    if (!meal) {
+      backLink.className = "back-link";
+      container.innerHTML = "";
+      var ph = document.createElement("div");
+      ph.className = "placeholder";
+      ph.textContent = "Pick a meal";
+      container.appendChild(ph);
+      return;
+    }
+
+    backLink.className = "back-link shown";
+
+    var kidsLabel = kidsPillText(data.kids);
+    var html = "";
+    html += '<div class="detail">';
+    html += '<div class="detail-name">' + esc(meal.name || "-") + "</div>";
+    html += '<div class="detail-meta">' + esc(SLOT_LABEL[meal.slot] || meal.slot) +
+      " · " + esc(DOW_LABEL[day.day] || day.day) + "</div>";
+
+    if (meal.kids) {
+      html += '<div style="margin-bottom:8px">' +
+        '<span class="kid-pill">' + esc(kidsLabel || "Kids night") + "</span></div>";
+    }
+    if (meal.kid_version) {
+      html += '<div class="kid-version">' + esc(meal.kid_version) + "</div>";
+    }
+    if (meal.note) {
+      html += '<div class="note">' + esc(meal.note) + "</div>";
+    }
+
+    var items = meal.items || [];
+    if (items.length) {
+      html += "<h3>Ingredients</h3><ul class=\"plain\">";
+      items.forEach(function (item) {
+        html += '<li class="ingredient-item">' + esc(item.food || "") +
+          (item.qty ? " (" + esc(item.qty) + ")" : "") +
+          '<span class="ingredient-macro">' + (item.cal || 0) + " cal, " + (item.p || 0) + "g protein</span>" +
+          "</li>";
+      });
+      html += "</ul>";
+    }
+
+    var totals = meal.totals || {};
+    html += '<div class="detail-totals">Totals: ' + (totals.cal || 0) + " cal, " +
+      (totals.p || 0) + "g protein, " + (totals.c || 0) + "g carbs, " + (totals.f || 0) + "g fat</div>";
+
+    var prepAhead = meal.prep_ahead || [];
+    if (prepAhead.length) {
+      html += "<h3>Prep ahead</h3><ul class=\"plain\">";
+      prepAhead.forEach(function (step) {
+        html += '<li class="ingredient-item prep-ahead-item">' +
+          '<span class="prep-ahead-when">' + esc(prepWhenLabel(step.when)) + "</span>" +
+          esc(step.step || "") + "</li>";
+      });
+      html += "</ul>";
+    }
+
+    var recipe = meal.recipe || [];
+    if (recipe.length) {
+      html += "<h3>How to make it</h3><ol class=\"steps\">";
+      recipe.forEach(function (step) {
+        html += "<li>" + esc(step) + "</li>";
+      });
+      html += "</ol>";
+    }
+
+    if (meal.prep) {
+      html += '<div class="detail-prep">' + esc(meal.prep) + "</div>";
+    }
+
+    html += "</div>";
+    container.innerHTML = html;
+  }
+
+  // ------------------------------------------------------- grocery/shopping
+
+  function fmtUSD(n) {
+    n = n || 0;
+    return "$" + n.toFixed(2);
+  }
+
+  function renderGroceryHeader(data, grocery) {
+    var header = document.getElementById("grocery-header");
+    var total = grocery.week_total_usd || 0;
+    var budget = grocery.budget_usd || 0;
+    header.textContent = "Week " + (data.week || "?") + " order: " +
+      fmtUSD(total) + " of " + fmtUSD(budget) + " budget";
+    header.className = "grocery-header " + (total > budget ? "over" : "ok");
+  }
+
+  function groceryRow(item, includeQty) {
+    var tr = document.createElement("tr");
+
+    var tdItem = document.createElement("td");
+    tdItem.textContent = item.item || "";
+    tr.appendChild(tdItem);
+
+    if (includeQty) {
+      var tdQty = document.createElement("td");
+      tdQty.className = "qty";
+      tdQty.textContent = item.qty || "";
+      tr.appendChild(tdQty);
+    }
+
+    var tdPrice = document.createElement("td");
+    tdPrice.className = "price";
+    tdPrice.textContent = fmtUSD(item.est_usd);
+    tr.appendChild(tdPrice);
+
+    return tr;
+  }
+
+  function renderGrocerySections(grocery) {
+    var wrap = document.getElementById("grocery-sections");
+    wrap.innerHTML = "";
+    (grocery.sections || []).forEach(function (section) {
+      var block = document.createElement("div");
+      block.className = "grocery-section";
+
+      var h = document.createElement("h3");
+      h.textContent = section.name || "";
+      block.appendChild(h);
+
+      var table = document.createElement("table");
+      table.className = "grocery-table";
+      var subtotal = 0;
+      (section.items || []).forEach(function (item) {
+        subtotal += item.est_usd || 0;
+        table.appendChild(groceryRow(item, true));
+      });
+      block.appendChild(table);
+
+      var sub = document.createElement("div");
+      sub.className = "grocery-subtotal";
+      sub.textContent = "Subtotal: " + fmtUSD(subtotal);
+      block.appendChild(sub);
+
+      wrap.appendChild(block);
+    });
+  }
+
+  function renderGroceryRestock(grocery) {
+    var ul = document.getElementById("grocery-restock");
+    ul.innerHTML = "";
+    (grocery.restock || []).forEach(function (item) {
+      var li = document.createElement("li");
+      li.textContent = (item.item || "") +
+        (item.qty ? " (" + item.qty + ")" : "") +
+        " – " + fmtUSD(item.est_usd);
+      ul.appendChild(li);
+    });
+  }
+
+  function renderGroceryTrip(grocery) {
+    var ul = document.getElementById("grocery-trip");
+    ul.innerHTML = "";
+    (grocery.trip_items || []).forEach(function (item) {
+      var li = document.createElement("li");
+      li.textContent = item.item || "";
+      if (item.note) {
+        var note = document.createElement("span");
+        note.className = "note";
+        note.textContent = " – " + item.note;
+        li.appendChild(note);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  function renderGroceryPantry(grocery) {
+    var pantry = grocery.monthly_pantry || {};
+    document.getElementById("grocery-pantry-total").textContent =
+      "Total: " + fmtUSD(pantry.total_usd);
+
+    var table = document.getElementById("grocery-pantry-table");
+    table.innerHTML = "";
+    (pantry.items || []).forEach(function (item) {
+      var tr = groceryRow(item, true);
+      if (item.mb_or_wf) {
+        var firstTd = tr.firstChild;
+        firstTd.textContent = (firstTd.textContent || "") + " [MB/WF]";
+      }
+      table.appendChild(tr);
+    });
+  }
+
+  function renderGrocery(data) {
+    var grocery = data.grocery || {};
+    renderGroceryHeader(data, grocery);
+    renderGrocerySections(grocery);
+    renderGroceryRestock(grocery);
+    renderGroceryTrip(grocery);
+    renderGroceryPantry(grocery);
+  }
+
+  function renderBottomSections(data) {
+    var kwf = document.getElementById("kids-weekend-food");
+    kwf.innerHTML = "";
+    (data.kids_weekend_food || []).forEach(function (item) {
+      var li = document.createElement("li");
+      li.textContent = item;
+      kwf.appendChild(li);
+    });
+
+    var cook = data.sunday_cook || {};
+    var steps = document.getElementById("sunday-cook-steps");
+    steps.innerHTML = "";
+    (cook.steps || []).forEach(function (step) {
+      var li = document.createElement("li");
+      li.textContent = step;
+      steps.appendChild(li);
+    });
+    var rule = document.getElementById("thursday-rule");
+    if (cook.thursday_rule) {
+      rule.textContent = cook.thursday_rule;
+      rule.hidden = false;
+    } else {
+      rule.hidden = true;
+    }
+
+    renderKidRules(data);
+  }
+
+  // renderKidRules shows one heading + rules list per entry in /api/menu's
+  // "kid_rules" map (kid name -> rules), and hides the whole details block
+  // when no kid currently has any rules.
+  function renderKidRules(data) {
+    var details = document.getElementById("kid-rules-details");
+    var body = document.getElementById("kid-rules-body");
+    var kidRules = data.kid_rules || {};
+    var names = Object.keys(kidRules);
+
+    body.innerHTML = "";
+    if (!names.length) {
+      details.hidden = true;
+      return;
+    }
+
+    names.forEach(function (name) {
+      var h = document.createElement("h3");
+      h.className = "kid-rules-name";
+      h.textContent = name;
+      body.appendChild(h);
+
+      var ul = document.createElement("ul");
+      ul.className = "plain";
+      (kidRules[name] || []).forEach(function (r) {
+        var li = document.createElement("li");
+        li.textContent = r;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    });
+    details.hidden = false;
+  }
+
+  function renderAll() {
+    if (!menuData) { return; }
+    renderTonight(menuData);
+    renderPrepRadar(menuData);
+    renderDayList(menuData);
+    renderMealsColumn(menuData);
+    renderDetailColumn(menuData);
+  }
+
+  function render(data) {
+    document.getElementById("loading").hidden = true;
+    document.getElementById("content").hidden = false;
+
+    // The LAN listener carries only the menu routes, so every other nav
+    // link (Jarvis/Tasks/Runs/Dashboard/Bifrost) would 404 there -- hide
+    // the whole nav rather than ship dead links.
+    document.getElementById("site-nav").hidden = !!data.lan;
+
+    menuData = data;
+
+    // Preserve the current selection across a refresh if it still
+    // resolves against the new data (day keys and meal slots are a
+    // fixed Sun-Sat / breakfast-lunch-dinner-snack set, so in practice
+    // this always holds -- the check just guards a malformed response).
+    if (selection.day && !findDay(data, selection.day)) {
+      selection.day = null;
+      selection.slot = null;
+    } else if (selection.day && selection.slot) {
+      var day = findDay(data, selection.day);
+      if (!findMeal(day, selection.slot)) {
+        selection.slot = null;
+      }
+    }
+
+    renderAll();
+    renderGrocery(data);
+    renderBottomSections(data);
+  }
+
+  function loadMenu() {
+    fetch("/api/menu")
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.error || ("HTTP " + resp.status));
+          });
+        }
+        return resp.json();
+      })
+      .then(function (data) {
+        clearError();
+        render(data);
+        signalStagerOnce();
+      })
+      .catch(function (err) {
+        document.getElementById("loading").hidden = true;
+        showError("Couldn't load the menu: " + err.message);
+      });
+  }
+
+  // ?stage=1 asks the instacart-stager extension (a content script on this
+  // page listens for the event) to start staging the week's cart. Fired
+  // once, after the first successful data render, so the extension sees a
+  // fully loaded page. Harmless when the extension is not installed.
+  var stagerSignaled = false;
+  function signalStagerOnce() {
+    if (stagerSignaled) return;
+    stagerSignaled = true;
+    if (new URLSearchParams(window.location.search).get("stage") === "1") {
+      setTimeout(function () {
+        document.dispatchEvent(new CustomEvent("aida-stage-order"));
+      }, 500);
+    }
+  }
+
+  function scheduleMidnightRefresh() {
+    var now = new Date();
+    var next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5, 0);
+    var ms = next.getTime() - now.getTime();
+    setTimeout(function () {
+      loadMenu();
+      scheduleMidnightRefresh();
+    }, ms);
+  }
+
+  // Shopping list opens by default on desktop (>= 900px, same breakpoint as
+  // the three-column layout) and stays collapsed on mobile. Set once at
+  // load, not on every render, so it doesn't stomp a manual toggle on the
+  // periodic refresh.
+  var shoppingList = document.getElementById("shopping-list");
+  if (shoppingList && window.matchMedia("(min-width: 900px)").matches) {
+    shoppingList.open = true;
+  }
+
+  document.getElementById("back-to-days").addEventListener("click", function (e) {
+    e.preventDefault();
+    setMobilePanel("days");
+  });
+  document.getElementById("back-to-meals").addEventListener("click", function (e) {
+    e.preventDefault();
+    setMobilePanel("meals");
+  });
+
+  loadMenu();
+  setInterval(loadMenu, 5 * 60 * 1000);
+  scheduleMidnightRefresh();
+})();
+</script>
+</body>
+</html>

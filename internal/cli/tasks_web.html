@@ -1,0 +1,1289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aida tasks</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --row-alt: #fafbfc;
+    --row-hover: #f0f4f8;
+    --border: #d8dee4;
+    --border-soft: #eaeef2;
+    --accent: #2b6cb0;
+    --chip-bg: #eef2f6;
+    --chip-fg: #334155;
+    --proj-bg: #e0ecff;
+    --proj-fg: #1e3a8a;
+    --part-bg: #fef3e2;
+    --part-fg: #92400e;
+    --pri-p1: #b91c1c;
+    --pri-p2: #b45309;
+    --pri-p3: #475569;
+    --st-open-bg: #dbeafe;        --st-open-fg: #1d4ed8;
+    --st-in-progress-bg: #ede9fe; --st-in-progress-fg: #6d28d9;
+    --st-hold-bg: #fef3c7;        --st-hold-fg: #92400e;
+    --st-deferred-bg: #e5e7eb;    --st-deferred-fg: #4b5563;
+    --st-done-bg: #dcfce7;        --st-done-fg: #15803d;
+    --st-closed-bg: #e2e8f0;      --st-closed-fg: #475569;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 16px 8px;
+  }
+  h1 {
+    font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  h1 .profile { color: var(--fg); font-weight: 500; }
+  header nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  header nav a.active { color: var(--fg); cursor: default; }
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  }
+  .filters label {
+    font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px;
+  }
+  .filters select, .filters input[type=text] {
+    font: inherit; padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px;
+    background: #fff;
+  }
+  .filters input[type=text] { min-width: 220px; }
+  .filters select[multiple] { min-width: 150px; height: auto; }
+  .filters button {
+    font: inherit; padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px;
+    background: #fff; cursor: pointer;
+  }
+  .filters button:hover { background: var(--chip-bg); }
+
+  /* Status count strip */
+  .status-strip {
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    margin-top: 8px; font-size: 12px;
+  }
+  .status-strip .count-btn {
+    font: inherit; cursor: pointer;
+    padding: 2px 9px; border-radius: 11px; border: 1px solid transparent;
+    background: var(--chip-bg); color: var(--chip-fg);
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: filter 0.1s ease;
+  }
+  .status-strip .count-btn:hover { filter: brightness(0.96); }
+  .status-strip .count-btn[data-status="open"]        { background: var(--st-open-bg);        color: var(--st-open-fg); }
+  .status-strip .count-btn[data-status="in-progress"] { background: var(--st-in-progress-bg); color: var(--st-in-progress-fg); }
+  .status-strip .count-btn[data-status="hold"]        { background: var(--st-hold-bg);        color: var(--st-hold-fg); }
+  .status-strip .count-btn[data-status="deferred"]    { background: var(--st-deferred-bg);    color: var(--st-deferred-fg); }
+  .status-strip .count-btn[data-status="done"]        { background: var(--st-done-bg);        color: var(--st-done-fg); }
+  .status-strip .count-btn[data-status="closed"]      { background: var(--st-closed-bg);      color: var(--st-closed-fg); }
+  .status-strip .count-btn.active { border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
+  .status-strip .count-btn .n { font-variant-numeric: tabular-nums; opacity: 0.85; }
+
+  main { padding: 12px 16px 60px; }
+  .count { color: var(--muted); font-size: 12px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+  ul.tasks { list-style: none; padding: 0; margin: 0; }
+  li.task {
+    background: var(--card);
+    border-bottom: 1px solid var(--border-soft);
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto auto auto;
+    gap: 4px 10px;
+    align-items: center;
+    transition: background 0.08s ease;
+  }
+  li.task:nth-child(even) { background: var(--row-alt); }
+  li.task:hover { background: var(--row-hover); }
+  li.task:first-child { border-top-left-radius: 6px; border-top-right-radius: 6px; }
+  li.task:last-child  { border-bottom: 1px solid var(--border-soft); border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+  ul.tasks { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--card); }
+
+  li.task .id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; color: var(--muted);
+    text-align: right; padding-right: 4px;
+  }
+  li.task .title {
+    font-weight: 500; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  li.task .title.clickable { cursor: pointer; }
+  li.task .title.clickable:hover { color: var(--accent); text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; }
+  li.task .task-body {
+    grid-column: 2 / 5;
+    margin-top: 6px; padding: 10px 12px;
+    background: #f8fafc; border: 1px solid var(--border-soft); border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+    color: #1f2937;
+  }
+  li.task .task-body.loading { color: var(--muted); font-family: inherit; font-style: italic; }
+  li.task .task-body.err-body { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+  .completed-at {
+    font-size: 10.5px; color: var(--st-done-fg); font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  li.task .links { display: flex; gap: 4px; align-items: center; }
+  li.task .meta {
+    grid-column: 2 / 6;
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    font-size: 11px; margin-top: 1px;
+  }
+
+  /* Pills */
+  .pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 8px; border-radius: 10px;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+    background: #eee; color: #333;
+  }
+  .pill::before { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700; line-height: 1; }
+  .pill[data-status="open"]        { background: var(--st-open-bg);        color: var(--st-open-fg); }
+  .pill[data-status="in-progress"] { background: var(--st-in-progress-bg); color: var(--st-in-progress-fg); }
+  .pill[data-status="hold"]        { background: var(--st-hold-bg);        color: var(--st-hold-fg); }
+  .pill[data-status="deferred"]    { background: var(--st-deferred-bg);    color: var(--st-deferred-fg); }
+  .pill[data-status="done"]        { background: var(--st-done-bg);        color: var(--st-done-fg); }
+  .pill[data-status="closed"]      { background: var(--st-closed-bg);      color: var(--st-closed-fg); }
+  .pill[data-status="open"]::before        { content: "○"; }
+  .pill[data-status="in-progress"]::before { content: "▶"; }
+  .pill[data-status="hold"]::before        { content: "⏸"; }
+  .pill[data-status="deferred"]::before    { content: "»"; }
+  .pill[data-status="done"]::before        { content: "✓"; }
+  .pill[data-status="closed"]::before      { content: "⊘"; }
+
+  .pri  { font-weight: 700; font-size: 10.5px; letter-spacing: 0.04em; }
+  .pri[data-pri="p1"] { color: var(--pri-p1); }
+  .pri[data-pri="p2"] { color: var(--pri-p2); }
+  .pri[data-pri="p3"] { color: var(--pri-p3); }
+
+  .chip {
+    display: inline-block; padding: 1px 7px; border-radius: 9px;
+    background: var(--chip-bg); color: var(--chip-fg); font-size: 10.5px;
+  }
+  .chip.proj { background: var(--proj-bg); color: var(--proj-fg); font-weight: 500; }
+  .chip.partner { background: var(--part-bg); color: var(--part-fg); font-weight: 500; }
+
+  /* External-link button (collapsed Slack URLs etc.) */
+  a.ext-link {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 8px; border-radius: 11px;
+    background: #f1f5f9; color: #334155;
+    font-size: 11px; text-decoration: none; font-weight: 500;
+    border: 1px solid transparent;
+  }
+  a.ext-link:hover { background: #e2e8f0; border-color: var(--border); }
+  a.ext-link.slack { background: #f5f3ff; color: #5b21b6; }
+  a.ext-link.slack:hover { background: #ede9fe; }
+
+  li.task select.status-select,
+  li.task select.priority-select {
+    font: inherit; font-size: 12px;
+    padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
+    background: #fff;
+  }
+  li.task select.status-select { min-width: 116px; }
+  li.task select.priority-select { min-width: 60px; color: var(--muted); }
+  li.task select.priority-select[data-pri="p1"] { color: var(--pri-p1); font-weight: 600; }
+  li.task select.priority-select[data-pri="p2"] { color: var(--pri-p2); font-weight: 600; }
+  li.task select.priority-select[data-pri="p3"] { color: var(--pri-p3); font-weight: 600; }
+  li.task select.status-select:hover,
+  li.task select.priority-select:hover { border-color: var(--muted); }
+  .err { color: #b91c1c; font-size: 12px; margin-left: 8px; }
+  .ok  { color: var(--st-done-fg); font-size: 12px; margin-left: 8px; }
+
+  /* Draft badges + buttons (jobs queue surface) */
+  .draft-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 7px; border-radius: 9px;
+    font-size: 10.5px; font-weight: 600;
+    background: var(--chip-bg); color: var(--chip-fg);
+    cursor: default;
+  }
+  .draft-badge[data-state="queued"]  { background: #e0e7ff; color: #3730a3; }
+  .draft-badge[data-state="running"] { background: #fef3c7; color: #92400e; animation: pulse 1.4s ease-in-out infinite; }
+  .draft-badge[data-state="ready"]   { background: #dcfce7; color: #15803d; cursor: pointer; }
+  .draft-badge[data-state="failed"]  { background: #fee2e2; color: #b91c1c; cursor: pointer; }
+  .draft-badge[data-state="incomplete"]  { background: #fef3c7; color: #b45309; cursor: pointer; }
+  .draft-badge[data-state="ready"]:hover  { filter: brightness(0.95); }
+  .draft-badge[data-state="failed"]:hover { filter: brightness(0.95); }
+  .draft-badge[data-state="incomplete"]:hover { filter: brightness(0.95); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.65; }
+  }
+
+  button.draft-btn {
+    font: inherit; font-size: 11px; cursor: pointer;
+    padding: 1px 8px; border-radius: 9px;
+    background: #eef2f6; color: #334155; border: 1px solid var(--border-soft);
+  }
+  button.draft-btn:hover { background: #dde3ec; }
+  button.draft-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  /* Draft modal - overlays the page; reuses task-body's text-rendering style */
+  .draft-modal-bg {
+    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+    z-index: 50; display: flex; justify-content: center; align-items: center;
+  }
+  .draft-modal {
+    background: var(--card); border-radius: 8px; padding: 18px 22px 14px;
+    max-width: 880px; width: 92%; max-height: 80vh;
+    display: flex; flex-direction: column; gap: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  }
+  .draft-modal h2 {
+    font-size: 14px; font-weight: 600; margin: 0; color: var(--fg);
+    display: flex; justify-content: space-between; gap: 8px;
+  }
+  .draft-modal h2 button {
+    font: inherit; cursor: pointer; padding: 2px 10px; border-radius: 4px;
+    background: var(--chip-bg); border: 1px solid var(--border);
+  }
+  .draft-modal pre {
+    margin: 0; flex: 1; overflow: auto; max-height: 65vh;
+    background: var(--row-alt); border: 1px solid var(--border-soft); border-radius: 4px;
+    padding: 12px; font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .draft-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding-top: 6px; border-top: 1px solid var(--border-soft);
+  }
+  .draft-actions button {
+    font: inherit; font-size: 12px; cursor: pointer;
+    padding: 5px 12px; border-radius: 5px;
+    background: var(--card); color: var(--fg);
+    border: 1px solid var(--border);
+    transition: background 0.08s ease;
+  }
+  .draft-actions button:hover { background: var(--chip-bg); }
+  .draft-actions button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .draft-actions button.primary:hover { filter: brightness(1.06); }
+  .draft-actions .action-status {
+    font-size: 11.5px; color: var(--st-done-fg); margin-left: auto;
+  }
+  .draft-actions .action-status.err { color: #b91c1c; }
+
+  /* Live event log (under a running task row) */
+  .draft-events {
+    grid-column: 1 / -1; margin-top: 4px; padding: 8px 12px;
+    background: var(--row-alt); border: 1px solid var(--border-soft); border-radius: 4px;
+    font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #475569; max-height: 160px; overflow-y: auto;
+  }
+  .draft-events .ev { display: block; }
+  .draft-events .ev.tool { color: #1e3a8a; }
+  .draft-events .ev.err  { color: #b91c1c; }
+  .draft-events .ev.done { color: var(--st-done-fg); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aida tasks <span id="profile" class="profile"></span></h1>
+  <nav>
+    <a href="/">Jarvis</a> &middot;
+    <a class="active">Tasks</a> &middot;
+    <a href="/runs">Runs</a> &middot;
+    <a href="/dashboard">Dashboard</a> &middot;
+    <a href="/bifrost">Bifrost</a> &middot;
+    <a href="/menu">Menu</a> &middot;
+    <a href="/habits">Habits</a>
+  </nav>
+  <div class="filters">
+    <label>Tag
+      <select id="project"><option value="">All tags</option></select>
+    </label>
+    <label>Priority
+      <select id="priority-filter">
+        <option value="">All</option>
+        <option value="p1">p1</option>
+        <option value="p2">p2</option>
+        <option value="p3">p3</option>
+        <option value="none">(none)</option>
+      </select>
+    </label>
+    <label>Status
+      <select id="status" multiple size="3"></select>
+    </label>
+    <label>Search
+      <input id="search" type="text" placeholder="title, tag, #id">
+    </label>
+    <label><input id="all-profiles" type="checkbox"> All profiles</label>
+    <button id="refresh" type="button">Refresh</button>
+    <span id="status-msg" class="err"></span>
+  </div>
+  <div class="status-strip" id="status-strip"></div>
+</header>
+<main>
+  <div class="count" id="count"></div>
+  <ul class="tasks" id="list"></ul>
+  <div class="empty" id="empty" style="display:none">No tasks match the filters.</div>
+</main>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const STATUSES = ["open", "in-progress", "hold", "deferred", "done", "closed"];
+  const ACTIVE = ["open", "in-progress"];
+
+  let allTasks = [];
+  let serverStatuses = STATUSES;
+  // allDraftStatus: { "<task-slug>": { state, run_id } } - populated
+  // by /api/tasks. Drives the draft badge + button cluster in the
+  // task meta row.
+  let allDraftStatus = {};
+
+  // ---- Render filter controls ----
+  function buildStatusOptions(selected) {
+    const sel = $("status");
+    sel.innerHTML = "";
+    for (const s of serverStatuses) {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      if (selected.includes(s)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.size = serverStatuses.length;
+  }
+
+  // Tags excluded from the Tag dropdown - system metadata and priorities,
+  // which already get their own visual treatment elsewhere.
+  function isFilterableTag(tag) {
+    if (tag.startsWith("profile:")) return false;
+    if (tag === "p1" || tag === "p2" || tag === "p3") return false;
+    return true;
+  }
+
+  // Group filterable tags by their canonical prefix. Anything without a known
+  // prefix lands in "Tags".
+  const TAG_GROUPS = [
+    { label: "Projects", prefix: "project:" },
+    { label: "Partners", prefix: "partner:" },
+  ];
+
+  function groupedTagsFromTasks(tasks) {
+    const groups = TAG_GROUPS.map(g => ({ label: g.label, prefix: g.prefix, tags: [] }));
+    const loose = { label: "Tags", prefix: "", tags: [] };
+    const seen = new Set();
+    const all = new Set();
+    for (const t of tasks) {
+      for (const tag of (t.tags || [])) {
+        if (!isFilterableTag(tag)) continue;
+        if (seen.has(tag)) continue;
+        seen.add(tag);
+        all.add(tag);
+        const g = groups.find(g => tag.startsWith(g.prefix));
+        (g ? g.tags : loose.tags).push(tag);
+      }
+    }
+    for (const g of groups) g.tags.sort();
+    loose.tags.sort();
+    return { groups: [...groups, loose].filter(g => g.tags.length > 0), all };
+  }
+
+  // Display strips known prefixes so options read cleanly within their group.
+  function tagDisplay(tag) {
+    for (const g of TAG_GROUPS) {
+      if (tag.startsWith(g.prefix)) return tag.slice(g.prefix.length);
+    }
+    return tag;
+  }
+
+  function rebuildProjectDropdown(tasks) {
+    const sel = $("project");
+    const current = sel.value;
+    const { groups, all } = groupedTagsFromTasks(tasks);
+    sel.innerHTML = '<option value="">All tags</option>';
+    for (const g of groups) {
+      const og = document.createElement("optgroup");
+      og.label = g.label;
+      for (const tag of g.tags) {
+        const opt = document.createElement("option");
+        opt.value = tag;
+        opt.textContent = tagDisplay(tag);
+        og.appendChild(opt);
+      }
+      sel.appendChild(og);
+    }
+    if (current && all.has(current)) sel.value = current;
+  }
+
+  // ---- Filtering ----
+  function selectedStatuses() {
+    return Array.from($("status").selectedOptions).map(o => o.value);
+  }
+
+  function priorityOf(tags) {
+    if (!tags) return null;
+    if (tags.includes("p1")) return "p1";
+    if (tags.includes("p2")) return "p2";
+    if (tags.includes("p3")) return "p3";
+    return null;
+  }
+
+  function matchesPriorityFilter(t, pf) {
+    if (!pf) return true;
+    if (pf === "none") return priorityOf(t.tags) === null;
+    return (t.tags || []).includes(pf);
+  }
+
+  function applyFilters(tasks) {
+    const tagFilter = $("project").value;
+    const priorityFilter = $("priority-filter").value;
+    const statuses = selectedStatuses();
+    const q = $("search").value.trim().toLowerCase();
+
+    return tasks.filter(t => {
+      if (statuses.length && !statuses.includes(t.status)) return false;
+      if (tagFilter && !(t.tags || []).includes(tagFilter)) return false;
+      if (!matchesPriorityFilter(t, priorityFilter)) return false;
+      if (q) {
+        const idStr = "#" + (t.task_id || "");
+        const hay = (
+          (t.title || "") + " " +
+          (t.tags || []).join(" ") + " " +
+          idStr + " " +
+          (t.slug || "")
+        ).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---- Render task list ----
+
+  // Pull URLs out of the title so they can render as compact link buttons
+  // on the right side. Slack URLs get the .slack styling and "Slack" label.
+  // Trailing " -- " or whitespace separators around the URL are stripped.
+  const URL_RE = /https?:\/\/\S+/g;
+  function splitExtLinks(rawTitle) {
+    if (!rawTitle) return { title: "", links: [] };
+    const links = [];
+    let title = rawTitle.replace(URL_RE, (m) => {
+      let label = "↗ link";
+      let cls = "";
+      try {
+        const host = new URL(m).hostname;
+        if (host.endsWith("slack.com")) { label = "Slack ↗"; cls = "slack"; }
+        else { label = host.replace(/^www\./, "") + " ↗"; }
+      } catch (e) { /* leave defaults */ }
+      links.push({ href: m, label, cls });
+      return "";
+    });
+    // Clean up dangling separators left behind by the URL extraction.
+    title = title
+      .replace(/\s*--\s*$/, "")
+      .replace(/\s*--\s+--\s*/g, " -- ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { title, links };
+  }
+
+  function tagChipClass(tag) {
+    if (tag.startsWith("project:")) return "chip proj";
+    if (tag.startsWith("partner:")) return "chip partner";
+    return "chip";
+  }
+  function tagChipText(tag) {
+    if (tag.startsWith("project:")) return tag.slice("project:".length);
+    if (tag.startsWith("partner:")) return tag.slice("partner:".length);
+    return tag;
+  }
+
+  function renderTask(t) {
+    const li = document.createElement("li");
+    li.className = "task";
+    li.dataset.slug = t.slug;
+
+    const id = document.createElement("div");
+    id.className = "id";
+    id.textContent = t.task_id ? "#" + t.task_id : "";
+    li.appendChild(id);
+
+    const { title: cleanTitle, links } = splitExtLinks(t.title || t.slug);
+    const title = document.createElement("div");
+    title.className = "title clickable";
+    title.textContent = cleanTitle || t.slug;
+    title.title = t.title || t.slug; // full text on hover (incl. URL)
+    title.addEventListener("click", () => toggleBody(li, t));
+    li.appendChild(title);
+
+    // External link buttons (collapsed Slack URLs etc.)
+    const linksEl = document.createElement("div");
+    linksEl.className = "links";
+    for (const lnk of links) {
+      const a = document.createElement("a");
+      a.className = "ext-link" + (lnk.cls ? " " + lnk.cls : "");
+      a.href = lnk.href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = lnk.label;
+      linksEl.appendChild(a);
+    }
+    li.appendChild(linksEl);
+
+    // Priority select (left of status)
+    const psel = document.createElement("select");
+    psel.className = "priority-select";
+    const currentPri = priorityOf(t.tags) || "";
+    psel.dataset.pri = currentPri;
+    const PRI_OPTS = [["", " - "], ["p1", "p1"], ["p2", "p2"], ["p3", "p3"]];
+    for (const [val, label] of PRI_OPTS) {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = label;
+      if (val === currentPri) opt.selected = true;
+      psel.appendChild(opt);
+    }
+    psel.addEventListener("change", () => onPriorityChange(t, psel));
+    li.appendChild(psel);
+
+    // Status select (rightmost action column)
+    const sel = document.createElement("select");
+    sel.className = "status-select";
+    for (const s of serverStatuses) {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      if (s === t.status) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener("change", () => onStatusChange(t, sel));
+    li.appendChild(sel);
+
+    // Meta row: status pill, priority, tags
+    const meta = document.createElement("div");
+    meta.className = "meta";
+
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.dataset.status = t.status;
+    pill.textContent = t.status;
+    meta.appendChild(pill);
+
+    if (t.completed_at) {
+      const ca = document.createElement("span");
+      ca.className = "completed-at";
+      ca.textContent = "✓ " + formatCompletedAt(t.completed_at);
+      ca.title = "Completed " + t.completed_at;
+      meta.appendChild(ca);
+    }
+
+    const pri = priorityOf(t.tags);
+    if (pri) {
+      const p = document.createElement("span");
+      p.className = "pri";
+      p.dataset.pri = pri;
+      p.textContent = pri;
+      meta.appendChild(p);
+    }
+
+    for (const tag of (t.tags || [])) {
+      if (tag === "p1" || tag === "p2" || tag === "p3") continue;
+      const c = document.createElement("span");
+      c.className = tagChipClass(tag);
+      c.textContent = tagChipText(tag);
+      meta.appendChild(c);
+    }
+
+    // Draft badge + button cluster (jobs queue surface).
+    // Status comes from /api/tasks's draft_status map; UI mirrors:
+    //   none    → [Prepare draft] button
+    //   queued  → "queued" badge (no button)
+    //   running → "running" pulsing badge + live event tail
+    //   ready   → clickable "draft ready" badge → modal viewer
+    //   failed  → "failed" badge + [Prepare draft] retry button
+    const draft = (allDraftStatus || {})[t.slug];
+    appendDraftControls(meta, li, t, draft);
+
+    li.appendChild(meta);
+    return li;
+  }
+
+  // appendDraftControls renders the badge + button cluster for one task.
+  // Pure DOM construction - no fetches; the parent caller subscribes
+  // to SSE on demand (when the user clicks Prepare draft, or on initial
+  // render if state is already running).
+  function appendDraftControls(meta, li, t, draft) {
+    const state = draft && draft.state ? draft.state : "none";
+
+    if (state === "none" || state === "failed") {
+      const btn = document.createElement("button");
+      btn.className = "draft-btn";
+      btn.textContent = state === "failed" ? "Retry draft" : "Prepare draft";
+      btn.addEventListener("click", () => requestDraft(t, btn, li));
+      meta.appendChild(btn);
+    }
+
+    if (state !== "none") {
+      const badge = document.createElement("span");
+      badge.className = "draft-badge";
+      badge.dataset.state = state;
+      badge.dataset.runId = draft && draft.run_id ? draft.run_id : "";
+      badge.textContent = state === "ready" ? "draft ready" : state;
+      if (state === "ready" || state === "failed") {
+        badge.title = state === "ready" ? "Click to view draft" : "Click to inspect failure";
+        badge.addEventListener("click", () => openDraftModal(t, draft.run_id));
+      }
+      meta.appendChild(badge);
+    }
+
+    // Auto-attach SSE for running drafts so refreshing the page
+    // doesn't lose live progress.
+    if (state === "running" && draft && draft.run_id) {
+      attachDraftStream(li, t, draft.run_id);
+    }
+  }
+
+  function requestDraft(t, btn, li) {
+    btn.disabled = true;
+    btn.textContent = "starting...";
+    fetch("/api/tasks/" + encodeURIComponent(t.slug) + "/draft", {
+      method: "POST",
+    })
+      .then(async (r) => {
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok && r.status !== 202) throw new Error(json.error || ("HTTP " + r.status));
+        return json;
+      })
+      .then((data) => {
+        if (!data.run_id) {
+          flash("err", "draft started but no run_id returned");
+          btn.disabled = false;
+          btn.textContent = "Prepare draft";
+          return;
+        }
+        // Replace the button with a running badge and start the SSE
+        // stream so the user sees mid-run tool calls.
+        btn.remove();
+        const meta = li.querySelector(":scope > .meta");
+        const badge = document.createElement("span");
+        badge.className = "draft-badge";
+        badge.dataset.state = "running";
+        badge.dataset.runId = data.run_id;
+        badge.textContent = "running";
+        meta.appendChild(badge);
+        attachDraftStream(li, t, data.run_id);
+        flash("ok", "Draft started for " + t.slug);
+      })
+      .catch((err) => {
+        flash("err", "Draft request failed: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "Prepare draft";
+      });
+  }
+
+  // attachDraftStream opens an EventSource against /api/runs/<id>/stream
+  // and writes each event into a <div class="draft-events"> under the
+  // task row. Closes the stream when a complete or error event arrives.
+  function attachDraftStream(li, task, runID) {
+    // Don't double-attach.
+    if (li.querySelector(":scope > .draft-events")) return;
+    const log = document.createElement("div");
+    log.className = "draft-events";
+    log.textContent = "starting agent...";
+    li.appendChild(log);
+
+    const src = new EventSource("/api/runs/" + encodeURIComponent(runID) + "/stream");
+    let firstLine = true;
+    src.onmessage = (ev) => {
+      if (firstLine) { log.textContent = ""; firstLine = false; }
+      let parsed;
+      try { parsed = JSON.parse(ev.data); } catch (_) { return; }
+      const span = document.createElement("span");
+      span.className = "ev";
+      let text = parsed.type;
+      if (parsed.data) {
+        if (parsed.type === "tool_call_start" || parsed.type === "tool_call") {
+          span.classList.add("tool");
+          text = parsed.type + ": " + (parsed.data.tool || "?") + " (turn " + (parsed.data.turn || "?") + ")";
+        } else if (parsed.type === "complete") {
+          span.classList.add("done");
+          text = "✓ complete in " + (parsed.data.turns || "?") + " turns, $" + (parsed.data.cost_usd || 0).toFixed(4);
+        } else if (parsed.type === "error") {
+          span.classList.add("err");
+          text = "✗ error: " + (parsed.data.message || "?");
+        }
+      }
+      span.textContent = text;
+      log.appendChild(span);
+      log.scrollTop = log.scrollHeight;
+      if (parsed.type === "complete" || parsed.type === "error") {
+        src.close();
+        // Refresh the row's badge to reflect the terminal state.
+        setTimeout(load, 250);
+      }
+    };
+    src.onerror = (err) => {
+      // EventSource fires onerror BOTH on a real error AND on a
+      // graceful close after the server signals end of stream.
+      // The browser auto-reconnects after a real error unless we
+      // explicitly close. readyState distinguishes the two:
+      //   CONNECTING (0): browser will retry - server might be down
+      //   OPEN      (1): unexpected - log and continue
+      //   CLOSED    (2): server closed cleanly OR error retried out
+      const states = ["connecting", "open", "closed"];
+      const stateName = states[src.readyState] || "unknown";
+      // If we never got our first message AND we're now closed, the
+      // user otherwise sees a frozen "starting agent..." forever.
+      // Surface a hint so they know to refresh.
+      if (firstLine && src.readyState === EventSource.CLOSED) {
+        log.textContent = "";
+        const span = document.createElement("span");
+        span.className = "ev err";
+        span.textContent = "stream closed before any events arrived (state=" +
+          stateName + "). Reload the page to see the final draft state.";
+        log.appendChild(span);
+        // Reload the task list shortly so a finished job's badge
+        // updates anyway.
+        setTimeout(load, 500);
+      }
+      src.close();
+    };
+  }
+
+  function openDraftModal(task, runID) {
+    // Tear down any previous modal first.
+    const prev = document.querySelector(".draft-modal-bg");
+    if (prev) prev.remove();
+
+    const bg = document.createElement("div");
+    bg.className = "draft-modal-bg";
+    bg.addEventListener("click", (e) => {
+      if (e.target === bg) bg.remove();
+    });
+
+    const modal = document.createElement("div");
+    modal.className = "draft-modal";
+
+    const h = document.createElement("h2");
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = "Draft: " + (task.title || task.slug);
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => bg.remove());
+    h.appendChild(titleSpan);
+    h.appendChild(closeBtn);
+    modal.appendChild(h);
+
+    const pre = document.createElement("pre");
+    pre.textContent = "loading...";
+    modal.appendChild(pre);
+
+    // Action row - Copy, Copy as plain text, Save .md.
+    // Hidden until the draft body has loaded so users don't click on
+    // an empty buffer.
+    const actions = document.createElement("div");
+    actions.className = "draft-actions";
+    actions.style.display = "none";
+    modal.appendChild(actions);
+
+    bg.appendChild(modal);
+    document.body.appendChild(bg);
+
+    // Fetch the draft body AND the run metadata (destination,
+    // artifact_url) in parallel. Destination drives which primary
+    // action button renders - Open PR for github-pr, Copy (plain)
+    // for slack-message, the universal Copy/Save trio otherwise.
+    Promise.all([
+      fetch("/api/runs/" + encodeURIComponent(runID) + "/output").then(async (r) => {
+        if (!r.ok) {
+          const j = await r.json().catch(() => ({}));
+          throw new Error(j.error || ("HTTP " + r.status));
+        }
+        return r.text();
+      }),
+      fetch("/api/runs/" + encodeURIComponent(runID)).then((r) => r.ok ? r.json() : {}),
+    ])
+      .then(([text, meta]) => {
+        pre.textContent = text || "(empty)";
+        renderDraftActions(actions, task, text || "", meta || {});
+        actions.style.display = "flex";
+      })
+      .catch((err) => { pre.textContent = "Could not load draft: " + err.message; });
+  }
+
+  // renderDraftActions chooses the primary action based on the
+  // destination on the run manifest (issue #58). The three universal
+  // buttons (Copy markdown / Copy as plain text / Save .md) always
+  // render so the user has a fallback even on typed destinations.
+  //
+  // Destination types in v1:
+  //   - github-pr     → primary "Open PR" link
+  //                     (artifact_url if set, else GitHub new-PR
+  //                      page pre-filled with title + body)
+  //   - slack-message → primary "Copy as plain text" (markdown
+  //                     doesn't render in Slack)
+  //   - none / other  → primary "Copy markdown"
+  function renderDraftActions(container, task, draftText, meta) {
+    container.innerHTML = "";
+
+    // Status pill is created first so click handlers can reference
+    // it in their closures without a temporal-dead-zone error.
+    const status = document.createElement("span");
+    status.className = "action-status";
+
+    const dest = (meta && meta.destination) || null;
+    const destType = dest && dest.type ? dest.type : "";
+    const artifactURL = meta && meta.artifact_url ? meta.artifact_url : "";
+
+    // --- destination-specific primary action -----------------------
+    if (destType === "github-pr") {
+      const openBtn = document.createElement("a");
+      openBtn.className = "primary";
+      openBtn.style.textDecoration = "none";
+      openBtn.style.display = "inline-block";
+      openBtn.target = "_blank";
+      openBtn.rel = "noopener noreferrer";
+      if (artifactURL) {
+        // Agent already opened the PR - link straight to it.
+        openBtn.href = artifactURL;
+        openBtn.textContent = "Open PR";
+        openBtn.title = artifactURL;
+      } else {
+        // Half-auto v1: open GitHub's compare-and-PR page pre-filled
+        // with the title (first line of draft) + body (rest).
+        const repo = dest.repo || "";
+        const { title, body } = splitPRDraft(draftText);
+        const branchPrefix = dest.branch_prefix || "aida/";
+        const branch = branchPrefix + (task.slug || "draft").replace(/[^a-z0-9-]+/gi, "-");
+        if (repo) {
+          openBtn.href = githubNewPRURL(repo, branch, title, body);
+          openBtn.textContent = "Open PR draft on GitHub";
+          openBtn.title = "Opens GitHub's new-PR page with title + body pre-filled";
+        } else {
+          openBtn.href = "#";
+          openBtn.textContent = "Open PR (no repo configured)";
+          openBtn.style.opacity = "0.5";
+          openBtn.style.cursor = "not-allowed";
+          openBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            flashAction(status, "destination.repo not set", true);
+          });
+        }
+      }
+      container.appendChild(openBtn);
+    } else if (destType === "slack-message") {
+      const slackBtn = document.createElement("button");
+      slackBtn.className = "primary";
+      slackBtn.textContent = "Copy for Slack";
+      const channelHint = dest.channel ? " (paste into " + dest.channel + ")" : "";
+      slackBtn.title = "Copies plain text" + channelHint;
+      slackBtn.addEventListener("click", () => {
+        const plain = stripMarkdown(draftText);
+        copyTextToClipboard(plain, status, slackBtn, "Copied for Slack" + channelHint);
+      });
+      container.appendChild(slackBtn);
+    }
+
+    // --- universal fallback trio (always available) ----------------
+    const copyBtn = document.createElement("button");
+    if (!destType) copyBtn.className = "primary";
+    copyBtn.textContent = "Copy markdown";
+    copyBtn.addEventListener("click", () => copyTextToClipboard(draftText, status, copyBtn, "Copied markdown"));
+    container.appendChild(copyBtn);
+
+    const plainBtn = document.createElement("button");
+    plainBtn.textContent = "Copy as plain text";
+    plainBtn.title = "Strips markdown formatting - paste-friendly for Gmail, Slack, etc.";
+    plainBtn.addEventListener("click", () => {
+      const plain = stripMarkdown(draftText);
+      copyTextToClipboard(plain, status, plainBtn, "Copied plain text");
+    });
+    container.appendChild(plainBtn);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Save .md";
+    saveBtn.addEventListener("click", () => {
+      const slug = (task.slug || "draft").replace(/[^a-z0-9-]+/gi, "-");
+      downloadAsFile(slug + ".md", draftText);
+      flashAction(status, "Downloaded " + slug + ".md");
+    });
+    container.appendChild(saveBtn);
+
+    container.appendChild(status);
+  }
+
+  // splitPRDraft parses the github-pr-shaped draft body into a title
+  // + body. The agent prompt asks for:
+  //
+  //   Title: <one line>
+  //   <blank>
+  //   <body markdown>
+  //
+  // Robust to small drift: if no "Title:" line is found, the first
+  // non-empty line becomes the title and the rest is the body. Empty
+  // input yields empty title + empty body.
+  function splitPRDraft(text) {
+    if (!text) return { title: "", body: "" };
+    const titleMatch = text.match(/^\s*Title:\s*(.+)$/im);
+    if (titleMatch) {
+      const title = titleMatch[1].trim();
+      const body = text.replace(titleMatch[0], "").trim();
+      return { title, body };
+    }
+    const lines = text.split("\n");
+    let titleLine = "";
+    let bodyStart = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim() !== "") {
+        titleLine = lines[i].trim();
+        bodyStart = i + 1;
+        break;
+      }
+    }
+    return { title: titleLine, body: lines.slice(bodyStart).join("\n").trim() };
+  }
+
+  // githubNewPRURL builds GitHub's "compare across forks" URL with
+  // title + body pre-filled. The branch is informational here - the
+  // user is opening the GitHub page; whether the branch actually
+  // exists upstream is their problem to solve in the GitHub UI.
+  function githubNewPRURL(repo, branch, title, body) {
+    const base = "https://github.com/" + repo + "/compare/main..." + encodeURIComponent(branch);
+    const params = new URLSearchParams();
+    params.set("quick_pull", "1");
+    if (title) params.set("title", title);
+    if (body) params.set("body", body);
+    return base + "?" + params.toString();
+  }
+
+  function copyTextToClipboard(text, statusEl, btn, successMsg) {
+    if (!navigator.clipboard) {
+      flashAction(statusEl, "Clipboard API unavailable in this browser", true);
+      return;
+    }
+    btn.disabled = true;
+    navigator.clipboard.writeText(text)
+      .then(() => flashAction(statusEl, successMsg))
+      .catch((err) => flashAction(statusEl, "Copy failed: " + err.message, true))
+      .finally(() => { btn.disabled = false; });
+  }
+
+  function flashAction(statusEl, msg, isErr) {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle("err", !!isErr);
+    setTimeout(() => { statusEl.textContent = ""; statusEl.classList.remove("err"); }, 2500);
+  }
+
+  function downloadAsFile(filename, content) {
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // stripMarkdown turns rendered markdown into plain text suitable
+  // for pasting into Gmail / Slack / anywhere that doesn't render
+  // markdown. Doesn't try to be a full CommonMark parser - handles
+  // the constructs the synthesizer + agent actually emit:
+  //   - headings (#, ##, ### …)
+  //   - bold/italic (** *)
+  //   - inline code (`)
+  //   - links [text](url) → "text (url)"
+  //   - bullets (-, *, +) → "•"
+  //   - numbered lists left as-is (they're already plain text)
+  //   - horizontal rules (---) → blank line
+  //   - HTML tags stripped wholesale (rare but agent sometimes emits)
+  //   - tables: |a|b|c| → "a  b  c"
+  function stripMarkdown(s) {
+    if (!s) return "";
+    let out = s;
+
+    // Strip HTML tags first so other passes don't get confused.
+    out = out.replace(/<[^>]+>/g, "");
+
+    // Code fences: drop the fence lines, keep contents.
+    out = out.replace(/^```[a-zA-Z0-9_-]*\n([\s\S]*?)\n```$/gm, "$1");
+
+    // Headings: drop the leading hashes + space.
+    out = out.replace(/^#{1,6}\s+/gm, "");
+
+    // Bold + italic: drop the asterisks/underscores. Order matters - 
+    // ** before * so we don't break double-asterisks into single.
+    out = out.replace(/\*\*([^*]+)\*\*/g, "$1");
+    out = out.replace(/__([^_]+)__/g, "$1");
+    out = out.replace(/\*([^*\n]+)\*/g, "$1");
+    out = out.replace(/_([^_\n]+)_/g, "$1");
+
+    // Inline code: drop backticks, keep contents.
+    out = out.replace(/`([^`]+)`/g, "$1");
+
+    // Links: [text](url) → "text (url)" so the URL survives.
+    // Skip image syntax ![alt](url) - drop entirely (rare in drafts).
+    out = out.replace(/!\[[^\]]*\]\([^)]+\)/g, "");
+    out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)");
+
+    // Bullets: -, *, + at line start → "• ".
+    out = out.replace(/^(\s*)[-*+]\s+/gm, "$1• ");
+
+    // Horizontal rules: --- or *** alone on a line → blank line.
+    out = out.replace(/^[-*_]{3,}\s*$/gm, "");
+
+    // Tables: collapse leading/trailing pipes, replace inner pipes
+    // with two spaces. Strip the separator line (---|---|---).
+    out = out.replace(/^\s*\|[-:|\s]+\|\s*$/gm, "");
+    out = out.replace(/^\s*\|(.+)\|\s*$/gm, (_, body) =>
+      body.split("|").map((c) => c.trim()).join("  ")
+    );
+
+    // Tighten triple+ newlines down to double.
+    out = out.replace(/\n{3,}/g, "\n\n");
+
+    return out.trim();
+  }
+
+  // Status counts respect every filter EXCEPT status itself, so the user
+  // sees "if I switched to status X, here's how many tasks I'd see."
+  function applyFiltersExceptStatus(tasks) {
+    const tagFilter = $("project").value;
+    const priorityFilter = $("priority-filter").value;
+    const q = $("search").value.trim().toLowerCase();
+    return tasks.filter(t => {
+      if (tagFilter && !(t.tags || []).includes(tagFilter)) return false;
+      if (!matchesPriorityFilter(t, priorityFilter)) return false;
+      if (q) {
+        const idStr = "#" + (t.task_id || "");
+        const hay = ((t.title || "") + " " + (t.tags || []).join(" ") + " " + idStr + " " + (t.slug || "")).toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  function buildStatusStrip() {
+    const strip = $("status-strip");
+    strip.innerHTML = "";
+    const pool = applyFiltersExceptStatus(allTasks);
+    const counts = {};
+    for (const s of serverStatuses) counts[s] = 0;
+    for (const t of pool) {
+      if (counts[t.status] !== undefined) counts[t.status]++;
+    }
+    const active = new Set(selectedStatuses());
+    for (const s of serverStatuses) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "count-btn" + (active.has(s) ? " active" : "");
+      btn.dataset.status = s;
+      btn.innerHTML = '<span>' + s + '</span><span class="n">' + counts[s] + '</span>';
+      btn.addEventListener("click", () => toggleStatus(s));
+      strip.appendChild(btn);
+    }
+  }
+
+  // Click on a status count button: select only that status, or - if it was
+  // the only one selected - revert to the active default (open + in-progress).
+  function toggleStatus(s) {
+    const sel = $("status");
+    const current = selectedStatuses();
+    const isOnlySelected = current.length === 1 && current[0] === s;
+    const next = isOnlySelected ? ACTIVE.slice() : [s];
+    for (const opt of sel.options) opt.selected = next.includes(opt.value);
+    render();
+  }
+
+  function render() {
+    const filtered = applyFilters(allTasks);
+    const list = $("list");
+    list.innerHTML = "";
+    for (const t of filtered) list.appendChild(renderTask(t));
+    $("count").textContent = filtered.length + " of " + allTasks.length + " tasks";
+    $("empty").style.display = filtered.length === 0 ? "block" : "none";
+    buildStatusStrip();
+  }
+
+  // ---- Status mutation ----
+  function onStatusChange(task, sel) {
+    const next = sel.value;
+    const prev = task.status;
+    if (next === prev) return;
+    if (!confirm('Change status of "' + (task.title || task.slug) + '"\nfrom "' + prev + '" to "' + next + '"?')) {
+      sel.value = prev;
+      flash("err", "Cancelled - #" + (task.task_id || "") + " left as " + prev);
+      return;
+    }
+    sel.disabled = true;
+    fetch("/api/tasks/" + encodeURIComponent(task.slug) + "/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+        return body;
+      })
+      .then((updated) => {
+        flash("ok", "Updated #" + (updated.task_id || "") + " → " + next);
+        load();
+      })
+      .catch((err) => {
+        flash("err", "Failed: " + err.message);
+        sel.value = prev;
+      })
+      .finally(() => { sel.disabled = false; });
+  }
+
+  // Priority change - no confirm dialog; lower-stakes than status.
+  function onPriorityChange(task, sel) {
+    const next = sel.value;
+    const prev = priorityOf(task.tags) || "";
+    if (next === prev) return;
+    sel.disabled = true;
+    fetch("/api/tasks/" + encodeURIComponent(task.slug) + "/priority", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priority: next }),
+    })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+        return body;
+      })
+      .then((updated) => {
+        flash("ok", "Priority #" + (updated.task_id || "") + " → " + (next || "none"));
+        load();
+      })
+      .catch((err) => {
+        flash("err", "Failed: " + err.message);
+        sel.value = prev;
+      })
+      .finally(() => { sel.disabled = false; });
+  }
+
+  // ---- Body expand/collapse ----
+  // Lazy-fetches the markdown body for a task and toggles a <div> under the
+  // row. Cached on first fetch via the element's data-loaded attribute.
+  function toggleBody(li, t) {
+    const existing = li.querySelector(":scope > .task-body");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const body = document.createElement("div");
+    body.className = "task-body loading";
+    body.textContent = "loading…";
+    li.appendChild(body);
+
+    fetch("/api/tasks/" + encodeURIComponent(t.slug) + "/body")
+      .then(async (r) => {
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(json.error || ("HTTP " + r.status));
+        return json;
+      })
+      .then((data) => {
+        body.classList.remove("loading");
+        body.textContent = stripFrontmatterAndTitle(data.body || "") || "(empty body)";
+      })
+      .catch((err) => {
+        body.classList.remove("loading");
+        body.classList.add("err-body");
+        body.textContent = "Could not load: " + err.message;
+      });
+  }
+
+  // The on-disk markdown file starts with YAML frontmatter (between `---`
+  // fences) followed by `# Title` then the body. The row already shows
+  // title and metadata, so strip both for the inline expand.
+  function stripFrontmatterAndTitle(raw) {
+    let s = raw;
+    if (s.startsWith("---")) {
+      const end = s.indexOf("\n---", 3);
+      if (end !== -1) {
+        s = s.slice(end + 4);
+      }
+    }
+    s = s.replace(/^\s*#\s+[^\n]*\n?/, "");
+    return s.trim();
+  }
+
+  // Render a `completed_at` RFC3339 timestamp as a compact local date.
+  function formatCompletedAt(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const yy = String(d.getFullYear()).slice(-2);
+    return m + "/" + day + "/" + yy;
+  }
+
+  let flashTimer = null;
+  function flash(cls, msg) {
+    const el = $("status-msg");
+    el.className = cls;
+    el.textContent = msg;
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { el.textContent = ""; }, 3000);
+  }
+
+  // ---- Loading ----
+  function load() {
+    const all = $("all-profiles").checked ? "?all_profiles=1" : "";
+    fetch("/api/tasks" + all)
+      .then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+        return body;
+      })
+      .then((data) => {
+        allTasks = data.tasks || [];
+        allDraftStatus = data.draft_status || {};
+        if (Array.isArray(data.statuses) && data.statuses.length) {
+          serverStatuses = data.statuses;
+        }
+        const profileLabel = data.all_profiles
+          ? "(all profiles)"
+          : (data.active_profile ? "(" + data.active_profile + ")" : "");
+        $("profile").textContent = profileLabel;
+        rebuildProjectDropdown(allTasks);
+        render();
+      })
+      .catch((err) => flash("err", "Load failed: " + err.message));
+  }
+
+  // ---- URL sync (search term) ----
+  function syncSearchToURL() {
+    const url = new URL(window.location.href);
+    const q = $("search").value;
+    if (q) url.searchParams.set("q", q);
+    else   url.searchParams.delete("q");
+    history.replaceState(null, "", url);
+  }
+
+  // ---- Init ----
+  buildStatusOptions(ACTIVE);
+  const initialQ = new URLSearchParams(window.location.search).get("q");
+  if (initialQ) $("search").value = initialQ;
+
+  $("project").addEventListener("change", render);
+  $("priority-filter").addEventListener("change", render);
+  $("status").addEventListener("change", render);
+  $("search").addEventListener("input", () => { syncSearchToURL(); render(); });
+  $("all-profiles").addEventListener("change", load);
+  $("refresh").addEventListener("click", load);
+  load();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    profiles: []
+
+  "Bad Name!":
+    kind: source
+    description: invalid slug, has a space and punctuation
+    profiles: [work]
+    source:
+      source: workouts

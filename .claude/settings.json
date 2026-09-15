@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && if git diff --quiet HEAD -- 2>/dev/null; then echo \"[aida] clean tree - pulling + building...\"; git pull --ff-only && make build; else echo \"[aida] dirty working tree - skipping git pull and make build\"; fi; git -C \"$HOME/.aida/brain\" pull --rebase --quiet 2>/dev/null || echo \"[aida] brain pull skipped\"",
+            "timeout": 120,
+            "statusMessage": "aida: pulling + building if clean..."
+          }
+        ]
+      }
+    ]
+  }
+}

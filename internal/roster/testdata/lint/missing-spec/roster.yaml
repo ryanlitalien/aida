@@ -1,0 +1,10 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    profiles: []
+
+  ghost:
+    kind: subagent
+    description: no subagent block at all, should error
+    profiles: [work]

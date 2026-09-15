@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Jarvis voice satellite for photon (M1 MacBook Air, office / Master bedroom).
+  Runs the always-on listener and speaks replies locally.
+  Installed at ~/Library/LaunchAgents/ on photon (GUI/Aqua session so the
+  one-time microphone-permission prompt can appear). API keys come from
+  ~/.aida/.env via aida's LoadDotEnv, not from this plist.
+
+  NOTE: Nest casting (--cast-device) is NOT wired up. That feature merged as
+  03333e4 and was reverted 20 minutes later by d297b06 on 2026-07-06; mainline
+  has no cast/ package and no --cast-device flag. Passing it here crash-loops
+  the daemon on an unknown flag. Re-add only alongside a real cast re-land.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ryan.jarvis-satellite</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <!-- caffeinate -i keeps photon awake (prevent idle sleep) while aida runs;
+         lid must stay open OR set `sudo pmset -c disablesleep 1` separately. -->
+    <string>/usr/bin/caffeinate</string>
+    <string>-i</string>
+    <string>__HOME__/.local/bin/aida</string>
+    <string>jarvis</string>
+    <string>daemon</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- aida shells out to whisper-cli + ffmpeg (Homebrew) and go-chromecast (~/.local/bin). -->
+    <key>PATH</key>
+    <string>__HOME__/.local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>__HOME__</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- Interactive: runs in the user's GUI session so mic/TCC works. -->
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/jarvis-satellite.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/jarvis-satellite.err.log</string>
+</dict>
+</plist>

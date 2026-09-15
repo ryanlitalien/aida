@@ -1,0 +1,82 @@
+# Aida golden query regression suite — REAL queries against this machine.
+#
+# Run with: `aida golden run`. Capture a new one with: `aida golden add`.
+#
+# Two kinds of assertions:
+#
+# 1. Routing (deterministic): partner / strategy / sources_must_include /
+#    sources_must_not_include / entities_must_include. These check the
+#    planner + LLM router output and should be stable across runs.
+#
+# 2. Answer (LLM-as-judge): the `judge` field is a natural-language
+#    criterion an extra LLM call evaluates against the synthesized answer.
+#    This replaces brittle regex matching against LLM output. Write the
+#    criterion as you would describe it to a human reviewer.
+#
+# Adversarial queries deliberately probe routing under ambiguity. They
+# don't necessarily produce a useful answer, but they SHOULD pick (or
+# refuse to pick) the right source.
+queries:
+  # ----- happy path: every-day questions on this machine -----
+
+  - id: workouts-latest
+    question: "what's the latest workout i did"
+    expected:
+      sources_must_include: [workouts]
+      sources_must_not_include: [git-dev, finances]
+      judge: |
+        The answer must identify a specific recent workout activity (run, ride, lift,
+        swim, etc.) with at least one piece of concrete detail (date, distance,
+        duration, or type). A vague "no data" or "I cannot find" answer is a fail.
+
+  - id: kevin-last-commit
+    question: "what was the last commit Kevin did?"
+    expected:
+      sources_must_include: [git-dev]
+      sources_must_not_include: [workouts, finances]
+      entities_must_include: ["Kevin"]
+      judge: |
+        The answer must identify a specific commit attributable to Kevin with
+        at least one of: a commit hash, a commit message snippet, an artifact id like
+        repo#N, or a date. The answer should not enumerate every commit ever.
+
+  - id: spend-last-month
+    question: "how much did I spend last month?"
+    expected:
+      sources_must_include: [finances]
+      sources_must_not_include: [git-dev, workouts]
+      judge: |
+        The answer must give a specific dollar amount (or be honest about an error).
+        It must not say "I cannot answer this question" without explaining what went
+        wrong, and must not invent a number unsupported by the source.
+
+  # ----- adversarial / ambiguous routing tests -----
+
+  - id: ambiguous-data-question
+    question: "show me my recent activity"
+    expected:
+      # "activity" is intentionally vague -- could be commits OR workouts.
+      # The router should pick AT LEAST one but not pull in finances
+      # (which is unrelated to "activity" in casual usage).
+      sources_must_not_include: [finances]
+      judge: |
+        The answer should either pick a specific kind of activity (workouts, commits,
+        etc.) and surface concrete recent items, OR explicitly tell the user the
+        question is ambiguous and ask which kind. A generic non-answer is a fail.
+
+  - id: should-not-route-finances-to-workouts
+    question: "how many miles did I run last week"
+    expected:
+      sources_must_not_include: [finances, git-dev]
+      judge: |
+        The answer should be about running mileage. It must not return data from
+        finances or git, and must not invent a mileage number that the source did not
+        produce.
+
+  - id: should-not-route-workouts-to-commits
+    question: "what files did I change yesterday"
+    expected:
+      sources_must_not_include: [workouts, finances]
+      judge: |
+        The answer should be about code/file changes (commits, diffs, file lists).
+        It must not return workout data or expense data.

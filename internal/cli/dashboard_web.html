@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aida dashboard</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --row-alt: #fafbfc;
+    --row-hover: #f0f4f8;
+    --border: #d8dee4;
+    --border-soft: #eaeef2;
+    --accent: #2b6cb0;
+    --chip-bg: #eef2f6;
+    --chip-fg: #334155;
+    --banner-err-bg: #fef2f2; --banner-err-fg: #b91c1c; --banner-err-border: #fecaca;
+    --banner-warn-bg: #fffbeb; --banner-warn-fg: #92400e; --banner-warn-border: #fde68a;
+
+    /* job/run state chips - mirrors runs_web.html's palette */
+    --st-queued-bg: #e5e7eb;            --st-queued-fg: #4b5563;
+    --st-running-bg: #ede9fe;           --st-running-fg: #6d28d9;
+    --st-awaiting_input-bg: #fef3c7;    --st-awaiting_input-fg: #92400e;
+    --st-awaiting_approval-bg: #fee2e2; --st-awaiting_approval-fg: #b91c1c;
+    --st-done-bg: #dcfce7;              --st-done-fg: #15803d;
+    --st-failed-bg: #fee2e2;            --st-failed-fg: #b91c1c;
+
+    /* fleet reach pills */
+    --reach-online-bg: #dcfce7;  --reach-online-fg: #15803d;
+    --reach-offline-bg: #fee2e2; --reach-offline-fg: #b91c1c;
+    --reach-unknown-bg: #e5e7eb; --reach-unknown-fg: #4b5563;
+    --reach-local-bg: #dbeafe;   --reach-local-fg: #1d4ed8;
+
+    /* aida-health pill - "unknown" (null) must look visually distinct
+       from "down" (probed, healthz:false) per the API contract. */
+    --aida-up-bg: #dcfce7;      --aida-up-fg: #15803d;
+    --aida-down-bg: #fee2e2;    --aida-down-fg: #b91c1c;
+    --aida-unknown-bg: #eef2f6; --aida-unknown-fg: #6b7280;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --bg: #0d1117;
+      --card: #161b22;
+      --row-alt: #1c2128;
+      --row-hover: #21262d;
+      --border: #30363d;
+      --border-soft: #21262d;
+      --accent: #58a6ff;
+      --chip-bg: #21262d;
+      --chip-fg: #c9d1d9;
+      --banner-err-bg: #3d1418;  --banner-err-fg: #ff7b72;  --banner-err-border: #5c2226;
+      --banner-warn-bg: #3a2e0a; --banner-warn-fg: #e3b341; --banner-warn-border: #5c4813;
+
+      --st-queued-bg: #30363d;            --st-queued-fg: #8b949e;
+      --st-running-bg: #3c2e63;           --st-running-fg: #bc8cff;
+      --st-awaiting_input-bg: #3a2e0a;    --st-awaiting_input-fg: #e3b341;
+      --st-awaiting_approval-bg: #3d1418; --st-awaiting_approval-fg: #ff7b72;
+      --st-done-bg: #12261d;              --st-done-fg: #56d364;
+      --st-failed-bg: #3d1418;            --st-failed-fg: #ff7b72;
+
+      --reach-online-bg: #12261d;  --reach-online-fg: #56d364;
+      --reach-offline-bg: #3d1418; --reach-offline-fg: #ff7b72;
+      --reach-unknown-bg: #30363d; --reach-unknown-fg: #8b949e;
+      --reach-local-bg: #123152;   --reach-local-fg: #79c0ff;
+
+      --aida-up-bg: #12261d;      --aida-up-fg: #56d364;
+      --aida-down-bg: #3d1418;    --aida-down-fg: #ff7b72;
+      --aida-unknown-bg: #21262d; --aida-unknown-fg: #8b949e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  header nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  header nav a.active { color: var(--fg); cursor: default; }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  main { padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 1100px; margin: 0 auto; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .panel-head h2 { font-size: 14px; margin: 0; font-weight: 650; }
+  .panel-head .spacer { flex: 1; }
+
+  select, button, input {
+    font: inherit; color: var(--fg); background: var(--card);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: var(--row-hover); }
+  button:disabled { cursor: wait; opacity: 0.6; }
+
+  .banner {
+    padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 12.5px;
+    border: 1px solid transparent;
+  }
+  .banner.err { background: var(--banner-err-bg); color: var(--banner-err-fg); border-color: var(--banner-err-border); }
+  .banner.warn { background: var(--banner-warn-bg); color: var(--banner-warn-fg); border-color: var(--banner-warn-border); }
+
+  .chip {
+    display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--chip-fg); font-size: 11px; font-weight: 600;
+  }
+  .chip.refreshing { background: #ede9fe; color: #6d28d9; }
+  .chip.warn { background: var(--banner-warn-bg); color: var(--banner-warn-fg); }
+
+  .pill {
+    display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; background: var(--chip-bg); color: var(--chip-fg);
+  }
+  .pill.reach-online  { background: var(--reach-online-bg);  color: var(--reach-online-fg); }
+  .pill.reach-offline { background: var(--reach-offline-bg); color: var(--reach-offline-fg); }
+  .pill.reach-unknown { background: var(--reach-unknown-bg); color: var(--reach-unknown-fg); }
+  .pill.reach-local   { background: var(--reach-local-bg);   color: var(--reach-local-fg); }
+
+  /* ---- Fleet ---- */
+  .dev-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px;
+  }
+  .dev-card {
+    border: 1px solid var(--border-soft); border-radius: 6px; padding: 10px 12px;
+    background: var(--row-alt); display: flex; flex-direction: column; gap: 6px;
+  }
+  .dev-card.stale { opacity: 0.55; }
+  .dev-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .dev-name { font-weight: 650; }
+  .dev-net { font-size: 12px; }
+  .aida-cell { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .aida-pill {
+    display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+  }
+  .aida-pill.up      { background: var(--aida-up-bg);      color: var(--aida-up-fg); }
+  .aida-pill.down    { background: var(--aida-down-bg);    color: var(--aida-down-fg); }
+  .aida-pill.unknown { background: var(--aida-unknown-bg); color: var(--aida-unknown-fg); }
+  .dev-error { color: var(--banner-err-fg); font-size: 12px; }
+  .dev-hw { font-size: 11px; }
+  .dev-foot { font-size: 11px; }
+  .fleet-totals {
+    margin-top: 10px; padding: 8px 12px; border-radius: 6px;
+    border: 1px dashed var(--border); background: var(--row-alt);
+    font-size: 12px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  }
+  .fleet-totals-label { font-weight: 650; }
+
+  /* ---- Jobs strip ---- */
+  .job-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .job-counts .chip[class*="state-"] { background: var(--chip-bg); color: var(--chip-fg); }
+  .job-counts .chip.state-queued            { background: var(--st-queued-bg);            color: var(--st-queued-fg); }
+  .job-counts .chip.state-running           { background: var(--st-running-bg);           color: var(--st-running-fg); }
+  .job-counts .chip.state-awaiting_input    { background: var(--st-awaiting_input-bg);    color: var(--st-awaiting_input-fg); }
+  .job-counts .chip.state-awaiting_approval { background: var(--st-awaiting_approval-bg); color: var(--st-awaiting_approval-fg); }
+  .job-counts .chip.state-done              { background: var(--st-done-bg);              color: var(--st-done-fg); }
+  .job-counts .chip.state-failed            { background: var(--st-failed-bg);            color: var(--st-failed-fg); }
+
+  ul.job-list { list-style: none; margin: 0; padding: 0; }
+  .job-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .job-row:last-child { border-bottom: none; }
+  .job-row .handle { font-weight: 600; }
+  .job-row .job-age { margin-left: auto; font-size: 11px; }
+  .job-row .chip.state-queued            { background: var(--st-queued-bg);            color: var(--st-queued-fg); }
+  .job-row .chip.state-running           { background: var(--st-running-bg);           color: var(--st-running-fg); }
+  .job-row .chip.state-awaiting_input    { background: var(--st-awaiting_input-bg);    color: var(--st-awaiting_input-fg); }
+  .job-row .chip.state-awaiting_approval { background: var(--st-awaiting_approval-bg); color: var(--st-awaiting_approval-fg); }
+  .job-row .chip.state-done              { background: var(--st-done-bg);              color: var(--st-done-fg); }
+  .job-row .chip.state-failed            { background: var(--st-failed-bg);            color: var(--st-failed-fg); }
+
+  /* ---- Brain ---- */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;
+    margin-bottom: 8px;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-n { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat-n.on  { color: var(--st-done-fg); }
+  .stat-n.off { color: var(--muted); }
+  .stat-l { font-size: 11px; color: var(--muted); }
+  .brain-foot { font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* ---- Flow ---- */
+  ul.flow-list { list-style: none; margin: 0 0 10px; padding: 0; }
+  .flow-row {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .flow-row:last-child { border-bottom: none; }
+  .flow-row.dim { opacity: 0.5; }
+  .flow-kind {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+    color: var(--muted); width: 46px; flex: none;
+  }
+  .flow-label { font-weight: 550; min-width: 0; }
+  .flow-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .flow-p50 { font-size: 11px; white-space: nowrap; }
+  .flow-unmeasured { margin-left: auto; font-size: 11px; font-style: italic; }
+  .flow-totals { font-size: 12px; }
+
+  .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+
+  /* ---- Models ---- */
+  .model-providers { display: flex; flex-direction: column; gap: 10px; }
+  .model-card {
+    border: 1px solid var(--border-soft); border-radius: 6px; padding: 10px 12px;
+    background: var(--row-alt);
+  }
+  .model-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .model-label { font-weight: 650; }
+  .model-bars, .model-spend { display: flex; flex-direction: column; gap: 5px; margin: 5px 0; }
+  .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .bar-label { width: 92px; flex: none; }
+  .bar-track {
+    position: relative;
+    flex: 1; height: 7px; border-radius: 999px; background: var(--chip-bg); overflow: hidden;
+  }
+  .bar-fill { display: block; height: 100%; border-radius: 999px; }
+  .bar-fill.sev-normal   { background: var(--accent); }
+  .bar-fill.sev-warning  { background: var(--banner-warn-fg); }
+  .bar-fill.sev-critical { background: var(--banner-err-fg); }
+  /* Pace tick: marks how far through the window the clock actually is,
+     so it can be compared at a glance against the fill (how far through
+     the window usage is). mix-blend-mode: difference guarantees it reads
+     against the fill OR the bare track, whatever color either happens to
+     be, in both themes, without a second set of tick colors to maintain. */
+  .bar-tick {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: #fff; mix-blend-mode: difference; pointer-events: none;
+  }
+  .bar-meta { white-space: nowrap; font-variant-numeric: tabular-nums; flex: none; }
+  .pace-chip { font-weight: 650; }
+  .pace-hot  { color: var(--banner-err-fg); }
+  .pace-idle { color: var(--accent); }
+  .pace-on   { color: var(--muted); }
+  .pace-strip {
+    font-size: 12px; margin: -2px 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .model-list { font-size: 12px; margin-top: 4px; }
+  .model-unlisted { font-size: 12px; margin-top: 4px; }
+  .model-warn { color: var(--banner-warn-fg); font-size: 12px; margin-top: 4px; }
+  .model-guidance {
+    list-style: disc; margin: 10px 0 0 18px; padding: 0; font-size: 12px; color: var(--muted);
+  }
+  .model-guidance li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aida dashboard</h1>
+  <nav>
+    <a href="/">Jarvis</a> &middot;
+    <a href="/tasks">Tasks</a> &middot;
+    <a href="/runs">Runs</a> &middot;
+    <a class="active">Dashboard</a> &middot;
+    <a href="/bifrost">Bifrost</a> &middot;
+    <a href="/menu">Menu</a> &middot;
+    <a href="/habits">Habits</a>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<script type="module">
+import { reactive, html } from '/static/arrow/index.mjs';
+
+const state = reactive({
+  fleet: null,
+  fleetErr: '',
+  fleetBusy: false,
+  runsData: null,
+  runsErr: '',
+  brain: null,
+  brainErr: '',
+  flow: null,
+  flowErr: '',
+  models: null,
+  modelsErr: '',
+  modelsBusy: false,
+});
+
+// ---- helpers ----
+
+function ago(ts) {
+  if (!ts) return '';
+  const t = Date.parse(ts);
+  if (isNaN(t)) return '';
+  // Go marshals an unset time.Time as "0001-01-01T00:00:00Z", which parses
+  // cleanly and renders as ~739817d. Any timestamp before the Unix epoch is
+  // a zero value, not a real observation -- say so instead.
+  if (t < 0) return 'never';
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h';
+  return Math.floor(s / 86400) + 'd';
+}
+
+function humanBytes(n) {
+  if (n === null || n === undefined) return ' - ';
+  if (n < 1024) return n + ' B';
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let v = n, u = -1;
+  do { v /= 1024; u++; } while (v >= 1024 && u < units.length - 1);
+  return v.toFixed(v < 10 ? 1 : 0) + ' ' + units[u];
+}
+
+// ---- data loading ----
+
+async function loadFleet() {
+  try {
+    const r = await fetch('/api/fleet');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.fleet = await r.json();
+    state.fleetErr = '';
+  } catch (e) {
+    state.fleetErr = 'Failed to load fleet: ' + e.message;
+  }
+}
+
+async function refreshFleet() {
+  if (state.fleetBusy) return;
+  state.fleetBusy = true;
+  try {
+    const r = await fetch('/api/fleet/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadFleet();
+  } catch (e) {
+    state.fleetErr = 'Refresh failed: ' + e.message;
+  } finally {
+    state.fleetBusy = false;
+  }
+}
+
+async function loadRuns() {
+  try {
+    const r = await fetch('/api/runs?state=active&limit=20');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.runsData = await r.json();
+    state.runsErr = '';
+  } catch (e) {
+    state.runsErr = 'Failed to load runs: ' + e.message;
+  }
+}
+
+async function loadBrain() {
+  try {
+    const r = await fetch('/api/brain/stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.brain = await r.json();
+    state.brainErr = '';
+  } catch (e) {
+    state.brainErr = 'Failed to load brain stats: ' + e.message;
+  }
+}
+
+async function loadFlow() {
+  try {
+    const r = await fetch('/api/dashboard/flow?window=24h&limit=200');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.flow = await r.json();
+    state.flowErr = '';
+  } catch (e) {
+    state.flowErr = 'Failed to load flow: ' + e.message;
+  }
+}
+
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.models = await r.json();
+    state.modelsErr = '';
+  } catch (e) {
+    state.modelsErr = 'Failed to load models: ' + e.message;
+  }
+}
+
+async function refreshModels() {
+  if (state.modelsBusy) return;
+  state.modelsBusy = true;
+  try {
+    const r = await fetch('/api/models/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    await loadModels();
+  } catch (e) {
+    state.modelsErr = 'Refresh failed: ' + e.message;
+  } finally {
+    state.modelsBusy = false;
+  }
+}
+
+// ---- Fleet ----
+
+function aidaFragment(d) {
+  if (d.aida === null || d.aida === undefined) {
+    // Deliberately distinct from "down": we never got an answer at all.
+    return html`<div class="aida-cell"><span class="aida-pill unknown">not probed</span></div>`;
+  }
+  const a = d.aida;
+  const cls = a.healthz ? 'aida-pill up' : 'aida-pill down';
+  const label = a.healthz ? 'healthy' : 'down';
+  const extra = [a.version ? 'v' + a.version : '', a.uptime || ''].filter(Boolean).join(' · ');
+  return html`
+    <div class="aida-cell">
+      <span class="${cls}">${label}</span>
+      ${() => (extra ? html`<span class="muted">${extra}</span>` : '')}
+    </div>
+  `;
+}
+
+// hardwareFragment renders the CPU · RAM · GPU (VRAM) · disk-free spec row
+// from d.hardware. Nil (unprobed/unreachable, or a probe: tailscale-only
+// / none device -- hardware is only ever collected for ssh/local) renders
+// nothing rather than an empty row, matching aidaFragment's null handling
+// above.
+function hardwareFragment(d) {
+  const hw = d.hardware;
+  if (!hw) return '';
+  const parts = [];
+  if (hw.cpu) parts.push(hw.cpu);
+  if (hw.mem) parts.push(hw.mem + ' RAM');
+  if (hw.gpu) parts.push(hw.gpu);
+  if (hw.disk) parts.push(hw.disk + ' free');
+  if (!parts.length) return '';
+  return html`<div class="dev-hw muted">${parts.join(' · ')}</div>`;
+}
+
+// Arrow gotcha, learned the hard way -- see the ${() => ...} wrappers below.
+//
+// Inside a KEYED template, Arrow reuses the existing DOM chunk when the item
+// re-renders. Plain text and attribute interpolations are re-evaluated on
+// that path and update fine. A NESTED TEMPLATE in a static expression
+// position is not: it renders once and then goes stale, and if its value
+// changes from '' to a template it is stringified into the page as
+// "(el) => renderTemplate(template, el)".
+//
+// So every expression here that produces a template -- inline `html` or a
+// call to a function returning one -- must be a () => arrow so Arrow treats
+// it as reactive. Plain values do not need it.
+function deviceCard(d) {
+  const reach = d.reach || 'unknown';
+  const cardClass = d.stale ? 'dev-card stale' : 'dev-card';
+  const reachClass = 'pill reach-' + reach;
+  const netText = d.tailscale_ip
+    ? d.tailscale_ip + (d.tailscale_os ? ' · ' + d.tailscale_os : '')
+    : 'no tailscale info';
+  const foot = 'probed ' + (ago(d.probed_at) || '?') + ' ago' +
+    (d.probe_took_ms ? ' · ' + d.probe_took_ms + 'ms' : '');
+  return html`
+    <article class="${cardClass}">
+      <div class="dev-top">
+        <span class="dev-name">${d.name}</span>
+        ${() => (d.role ? html`<span class="chip">${d.role}</span>` : '')}
+        <span class="${reachClass}">${reach}</span>
+      </div>
+      <div class="dev-net muted">${netText}</div>
+      ${() => aidaFragment(d)}
+      ${() => hardwareFragment(d)}
+      ${() => (d.error ? html`<div class="dev-error">${d.error}</div>` : '')}
+      <div class="dev-foot muted">${foot}</div>
+    </article>
+  `.key(d.name);
+}
+
+// fleetTotalsCard renders the fleet-wide hardware summary from
+// state.fleet.totals (fleet.FleetTotals, JSON-serialized): total physical
+// machines, CPU cores, RAM, GPU VRAM, and disk free/total. The server
+// already excludes "-wsl" sub-nodes like beast-wsl from these sums (same
+// physical CPU/GPU as their host, would double-count) -- this just
+// displays what it's given, no client-side math. Renders nothing before
+// the first snapshot lands, or if there are no devices at all.
+function fleetTotalsCard() {
+  const t = state.fleet && state.fleet.totals;
+  if (!t || !t.machines) return '';
+  const parts = [t.machines + (t.machines === 1 ? ' machine' : ' machines')];
+  if (t.cores) parts.push(t.cores + ' cores');
+  if (t.mem_gb) parts.push(Math.round(t.mem_gb) + 'GB RAM');
+  if (t.gpu_gb) parts.push(Math.round(t.gpu_gb) + 'GB VRAM');
+  if (t.disk_total_gb) parts.push(Math.round(t.disk_free_gb) + 'GB free of ' + Math.round(t.disk_total_gb) + 'GB disk');
+  return html`
+    <div class="fleet-totals">
+      <span class="fleet-totals-label">Fleet totals</span>
+      <span class="muted">${parts.join(' · ')}</span>
+    </div>
+  `;
+}
+
+function fleetSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Fleet</h2>
+        <span class="muted">${() => (state.fleet && state.fleet.generated_at) ? 'updated ' + ago(state.fleet.generated_at) + ' ago' : ''}</span>
+        ${() => (state.fleet && state.fleet.refreshing) ? html`<span class="chip refreshing">refreshing…</span>` : ''}
+        <span class="spacer"></span>
+        <button @click="${refreshFleet}" disabled="${() => state.fleetBusy}">${() => state.fleetBusy ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+      ${() => state.fleetErr ? html`<div class="banner err">${state.fleetErr}</div>` : ''}
+      ${() => (state.fleet && !state.fleet.tailscale_ok)
+        ? html`<div class="banner warn">Tailscale reachability is unavailable - reach/IP data may be stale or missing.</div>`
+        : ''}
+      ${() => (state.fleet && state.fleet.warnings && state.fleet.warnings.length)
+        ? html`<div class="banner warn">${state.fleet.warnings.join('; ')}</div>`
+        : ''}
+      <div class="dev-grid">
+        ${() => {
+          if (!state.fleet) return state.fleetErr ? '' : html`<div class="empty">Loading fleet…</div>`;
+          const devices = state.fleet.devices || [];
+          if (!devices.length) return html`<div class="empty">No devices configured.</div>`;
+          return devices.map(d => deviceCard(d));
+        }}
+      </div>
+      ${() => fleetTotalsCard()}
+    </section>
+  `;
+}
+
+// ---- Jobs strip ----
+
+function jobsSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Jobs</h2>
+        <span class="muted">${() => (state.runsData && state.runsData.active_profile) ? 'profile: ' + state.runsData.active_profile : ''}</span>
+      </div>
+      ${() => state.runsErr ? html`<div class="banner err">${state.runsErr}</div>` : ''}
+      <div class="job-counts">
+        ${() => {
+          if (!state.runsData) return '';
+          const runs = state.runsData.runs || [];
+          if (!runs.length) return html`<span class="muted">No active jobs.</span>`;
+          const counts = {};
+          for (const r of runs) counts[r.State] = (counts[r.State] || 0) + 1;
+          return Object.keys(counts).map(k =>
+            html`<span class="${'chip state-' + k}">${k.replace(/_/g, ' ')}: ${counts[k]}</span>`.key(k)
+          );
+        }}
+      </div>
+      <ul class="job-list">
+        ${() => {
+          if (!state.runsData) return '';
+          const runs = (state.runsData.runs || []).slice(0, 8);
+          if (!runs.length) return '';
+          return runs.map(r => html`
+            <li class="job-row">
+              <span class="handle">${r.Handle || r.RunID}</span>
+              <span class="${'chip state-' + r.State}">${(r.State || '').replace(/_/g, ' ')}</span>
+              <span class="muted job-age">${ago(r.StartedAt && !String(r.StartedAt).startsWith('0001') ? r.StartedAt : r.EnqueuedAt)} ago</span>
+            </li>
+          `.key(r.RunID));
+        }}
+      </ul>
+    </section>
+  `;
+}
+
+// ---- Brain ----
+
+function brainSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Brain</h2></div>
+      ${() => state.brainErr ? html`<div class="banner err">${state.brainErr}</div>` : ''}
+      ${() => {
+        if (!state.brain) return state.brainErr ? '' : html`<div class="empty">Loading…</div>`;
+        const b = state.brain;
+        return html`
+          <div class="stat-grid">
+            <div class="stat"><span class="stat-n">${b.lessons ?? 0}</span><span class="stat-l">lessons</span></div>
+            <div class="stat"><span class="stat-n">${b.jarvis_lessons ?? 0}</span><span class="stat-l">jarvis lessons</span></div>
+            <div class="stat"><span class="stat-n">${b.entities ?? 0}</span><span class="stat-l">entities</span></div>
+            <div class="stat"><span class="stat-n">${(b.tasks_open ?? 0)} / ${(b.tasks_done ?? 0)}</span><span class="stat-l">tasks open / done</span></div>
+            <div class="stat"><span class="stat-n">${humanBytes(b.db_size_bytes)}</span><span class="stat-l">db size</span></div>
+            <div class="stat"><span class="${b.has_embeddings ? 'stat-n on' : 'stat-n off'}">${b.has_embeddings ? 'on' : 'off'}</span><span class="stat-l">embeddings</span></div>
+          </div>
+          <div class="brain-foot muted">
+            <span>profile: ${b.profile || 'default'}</span>
+            ${b.last_lesson ? html`<span>last lesson: ${b.last_lesson}</span>` : ''}
+            ${b.is_stale ? html`<span class="chip warn">brain index stale - rebuilding</span>` : ''}
+          </div>
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- Flow ----
+
+function flowRow(n) {
+  const rowClass = n.measured ? 'flow-row' : 'flow-row dim';
+  const kindClass = 'flow-kind';
+  return html`
+    <li class="${rowClass}">
+      <span class="${kindClass}">${n.kind || 'phase'}</span>
+      <span class="flow-label">${n.label || n.id}</span>
+      ${() => (n.measured
+        ? html`<span class="flow-count">${n.count ?? 0} runs</span><span class="muted flow-p50">p50 ${n.p50_ms ?? 0}ms</span>`
+        : html`<span class="muted flow-unmeasured">not yet measured</span>`)}
+    </li>
+  `.key(n.id);
+}
+
+function flowSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Flow</h2>
+        <span class="muted">
+          ${() => {
+            if (!state.flow) return '';
+            const label = state.flow.truncated ? 'last ' + (state.flow.run_count ?? 0) + ' runs' : (state.flow.run_count ?? 0) + ' runs';
+            return state.flow.window + ' · ' + label;
+          }}
+        </span>
+      </div>
+      ${() => state.flowErr ? html`<div class="banner err">${state.flowErr}</div>` : ''}
+      ${() => {
+        if (!state.flow) return state.flowErr ? '' : html`<div class="empty">Loading…</div>`;
+        const f = state.flow;
+        const nodes = f.nodes || [];
+        if (!nodes.length) return html`<div class="empty">No flow data yet.</div>`;
+        return html`
+          <ul class="flow-list">
+            ${nodes.map(n => flowRow(n))}
+          </ul>
+          <div class="flow-totals muted">
+            $${(f.total_cost_usd || 0).toFixed(4)} ·
+            ${f.total_tokens_in || 0} in / ${f.total_tokens_out || 0} out tokens ·
+            ${f.llm_calls || 0} llm calls
+          </div>
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- Models ----
+
+// formatDurationHuman mirrors internal/models.FormatDurationHuman (Go):
+// days+hours past 23 hours ("6d 22h", minutes dropped), the existing
+// compact "3h15m" form from 1h up to 23h59m, and minutes-only ("42m")
+// under an hour. diffMs is assumed non-negative -- resetRelative below
+// handles the "past due" case itself before calling this.
+function formatDurationHuman(diffMs) {
+  const totalMin = Math.floor(diffMs / 60000);
+  if (totalMin >= 24 * 60) {
+    const days = Math.floor(totalMin / (24 * 60));
+    const hours = Math.floor((totalMin % (24 * 60)) / 60);
+    return `${days}d ${hours}h`;
+  }
+  if (totalMin >= 60) {
+    return `${Math.floor(totalMin / 60)}h${totalMin % 60}m`;
+  }
+  return `${totalMin}m`;
+}
+
+// roundPricesForDisplay mirrors internal/models.RoundPricesForDisplay
+// (Go): a price ending in .99 rounds up to the next whole dollar
+// ("$19.99" -> "$20", "$74.99/mo" -> "$75/mo"), and a price already at a
+// whole-dollar amount drops its trailing ".00" ("$75.00" -> "$75").
+// Anything else ("$32.81") is left as-is. Render-time only -- never
+// mutates state.models, just what this page prints.
+function roundPricesForDisplay(s) {
+  if (!s) return s;
+  return String(s).replace(/\$(\d+)\.(\d{2})/g, (match, whole, cents) => {
+    let w = parseInt(whole, 10);
+    let c = parseInt(cents, 10);
+    if (c === 99) { w += 1; c = 0; }
+    if (c === 0) return '$' + w;
+    return match;
+  });
+}
+
+// resetRelative renders a Bar's resets_at as "resets in 3h50m" -- just
+// the relative countdown, no clock time (the compact form the Models
+// panel's bar rows use; the CLI's fuller "1:10pm (in 2h13m)" form isn't
+// needed here since the bar row is already dense with used/left text).
+// An empty/zero timestamp (Go's zero time marshals as
+// "0001-01-01T00:00:00Z") renders as "resets ?".
+function resetRelative(iso) {
+  if (!iso) return 'resets ?';
+  const t = Date.parse(iso);
+  if (isNaN(t) || t < 0) return 'resets ?';
+  const diffMs = t - Date.now();
+  if (diffMs < 0) return 'resets past due';
+  return 'resets in ' + formatDurationHuman(diffMs);
+}
+
+// resetDate renders a Spend row's resets_at as a short local date, e.g.
+// "resets Oct 1" -- mirroring the CLI's formatResetsDate. Empty for a
+// zero/missing timestamp rather than a bogus date.
+function resetDate(iso) {
+  if (!iso) return '';
+  const t = Date.parse(iso);
+  if (isNaN(t) || t < 0) return '';
+  return 'resets ' + new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+// pacedPace returns b/s.pace when it carries an actual verdict worth
+// showing -- a chip/tick is never rendered for a null Pace (no window,
+// too short a window, no reset time) or an "early" one (too little of
+// the window has elapsed for pace to mean anything yet); both render
+// the same plain used/left text unpaced rows always have.
+function pacedPace(pace) {
+  return pace && pace.verdict !== 'early' ? pace : null;
+}
+
+// paceClass/paceChipText mirror internal/models.FormatPaceChip (Go) and
+// its verdict->CSS-class mapping: the compact token shown next to a
+// paced row's used%, and the class that colors it.
+function paceClass(verdict) {
+  if (verdict === 'hot') return 'pace-hot';
+  if (verdict === 'idle') return 'pace-idle';
+  if (verdict === 'on-pace') return 'pace-on';
+  return '';
+}
+
+function paceChipText(pace) {
+  if (pace.verdict === 'hot') return pace.ratio.toFixed(1) + 'x HOT';
+  if (pace.verdict === 'idle') return pace.ratio.toFixed(1) + 'x IDLE';
+  if (pace.verdict === 'on-pace') return 'on pace';
+  return '';
+}
+
+// barMeta renders a bar/spend row's meta line: the plain "X% used · Y%
+// left · resets in Z" text for an unpaced row, unchanged from before, or
+// -- once a bar's window is a day or longer and it's past the "early"
+// cutoff -- "X% used · <chip> · <detail> · resets in Z", dropping "%
+// left" since it's redundant with the tick+fill already on the bar.
+function barMeta(pct, left, pace, resetText) {
+  const paced = pacedPace(pace);
+  if (!paced) {
+    return html`${Math.round(pct)}% used · ${Math.round(left)}% left · ${resetText}`;
+  }
+  const cls = 'pace-chip ' + paceClass(paced.verdict);
+  return html`${Math.round(pct)}% used · <span class="${cls}">${paceChipText(paced)}</span>${paced.detail ? ' · ' + paced.detail : ''} · ${resetText}`;
+}
+
+function modelBarRow(b) {
+  const pct = Math.max(0, Math.min(100, b.percent ?? 0));
+  const left = b.left ?? (100 - (b.percent ?? 0));
+  const sevClass = 'bar-fill sev-' + (b.severity || 'normal');
+  const paced = pacedPace(b.pace);
+  const tickPct = paced ? Math.max(0, Math.min(100, paced.elapsed * 100)) : null;
+  return html`
+    <div class="bar-row">
+      <span class="bar-label">${b.label}</span>
+      <div class="bar-track">
+        <span class="${sevClass}" style="${'width:' + pct + '%'}"></span>
+        ${tickPct === null ? '' : html`<span class="bar-tick" style="${'left:' + tickPct + '%'}"></span>`}
+      </div>
+      <span class="bar-meta muted">${barMeta(pct, left, b.pace, resetRelative(b.resets_at))}</span>
+    </div>
+  `.key(b.label);
+}
+
+function modelSpendRow(s) {
+  const budget = s.budget || 0;
+  const pct = budget > 0 ? Math.max(0, Math.min(100, (s.spend / budget) * 100)) : 0;
+  const sevClass = 'bar-fill sev-' + (pct >= 90 ? 'critical' : pct >= 70 ? 'warning' : 'normal');
+  const amounts = roundPricesForDisplay('$' + (s.spend ?? 0).toFixed(2) + ' / $' + budget.toFixed(2));
+  const paced = pacedPace(s.pace);
+  const tickPct = paced ? Math.max(0, Math.min(100, paced.elapsed * 100)) : null;
+  const resetText = resetDate(s.resets_at) || '';
+  const meta = paced
+    ? html`${amounts} · <span class="${'pace-chip ' + paceClass(paced.verdict)}">${paceChipText(paced)}</span>${paced.detail ? ' · ' + paced.detail : ''}${resetText ? '  ·  ' + resetText : ''}`
+    : html`${amounts}${resetText ? '  ·  ' + resetText : ''}`;
+  return html`
+    <div class="bar-row">
+      <span class="bar-label">${s.key}</span>
+      <div class="bar-track">
+        <span class="${sevClass}" style="${'width:' + pct + '%'}"></span>
+        ${tickPct === null ? '' : html`<span class="bar-tick" style="${'left:' + tickPct + '%'}"></span>`}
+      </div>
+      <span class="bar-meta muted">${meta}</span>
+    </div>
+  `.key(s.key);
+}
+
+// ---- Pace exception strip: which bars/spend rows across every provider
+// are off-pace right now, one line, so a glance at the panel header
+// answers "is anything burning hot or sitting idle" without reading
+// every card. ----
+
+function collectPaceExceptions(providers) {
+  const hot = [];
+  const idle = [];
+  for (const p of providers) {
+    const usage = p.usage || {};
+    for (const b of (usage.bars || [])) {
+      if (b.pace && b.pace.verdict === 'hot') hot.push(p.label + ' ' + b.label);
+      else if (b.pace && b.pace.verdict === 'idle') idle.push(p.label + ' ' + b.label);
+    }
+    for (const s of (usage.spend || [])) {
+      if (s.pace && s.pace.verdict === 'hot') hot.push(p.label + ' ' + s.key);
+      else if (s.pace && s.pace.verdict === 'idle') idle.push(p.label + ' ' + s.key);
+    }
+  }
+  return { hot, idle };
+}
+
+function paceExceptionStrip(providers) {
+  const { hot, idle } = collectPaceExceptions(providers);
+  if (!hot.length && !idle.length) return '';
+  const hotPart = hot.length ? html`<span class="pace-hot">HOT:</span> ${hot.join(', ')}` : '';
+  const sep = (hot.length && idle.length) ? '   ' : '';
+  const idlePart = idle.length ? html`<span class="pace-idle">IDLE:</span> ${idle.join(', ')}` : '';
+  return html`<div class="pace-strip">${hotPart}${sep}${idlePart}</div>`;
+}
+
+function modelsList(ms) {
+  if (!ms || !ms.length) return '';
+  return ms.map(m => (m.nicknames && m.nicknames.length ? m.nicknames[0] : m.id) + ' (' + m.id + ')').join(', ');
+}
+
+function modelProviderCard(p) {
+  const usage = p.usage || {};
+  const bars = usage.bars || [];
+  const spend = usage.spend || [];
+  const unlisted = (usage.detail && usage.detail.unlisted_models) || '';
+  const resetCredits = parseInt((usage.detail && usage.detail.reset_credits) || '0', 10) || 0;
+  return html`
+    <article class="model-card">
+      <div class="model-card-head">
+        <span class="model-label">${p.label}</span>
+        ${() => (p.plan || usage.plan ? html`<span class="chip">${roundPricesForDisplay(usage.plan || p.plan)}</span>` : '')}
+        ${() => (p.account ? html`<span class="muted">${p.account}</span>` : '')}
+      </div>
+      ${() => (bars.length ? html`<div class="model-bars">${bars.map(b => modelBarRow(b))}</div>` : '')}
+      ${() => (spend.length ? html`<div class="model-spend">${spend.map(s => modelSpendRow(s))}</div>` : '')}
+      ${() => (p.models && p.models.length ? html`<div class="model-list muted">models: ${modelsList(p.models)}</div>` : '')}
+      ${() => (unlisted ? html`<div class="model-unlisted muted">unlisted locally, not in roster: ${unlisted}</div>` : '')}
+      ${() => (resetCredits > 0 ? html`<div class="model-list muted">reset credits: ${resetCredits} free full resets available</div>` : '')}
+      ${() => (usage.warn ? html`<div class="model-warn">usage: ${usage.warn}</div>` : (usage.err ? html`<div class="dev-error">usage: ${usage.err}</div>` : ''))}
+    </article>
+  `.key(p.name);
+}
+
+function modelsSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Models</h2>
+        <span class="muted">${() => (state.models && state.models.updated) ? 'roster updated ' + state.models.updated : ''}</span>
+        <span class="spacer"></span>
+        <button @click="${refreshModels}" disabled="${() => state.modelsBusy}">${() => state.modelsBusy ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+      ${() => state.models ? paceExceptionStrip(state.models.providers || []) : ''}
+      ${() => state.modelsErr ? html`<div class="banner err">${state.modelsErr}</div>` : ''}
+      <div class="model-providers">
+        ${() => {
+          if (!state.models) return state.modelsErr ? '' : html`<div class="empty">Loading models…</div>`;
+          const providers = state.models.providers || [];
+          if (!providers.length) return html`<div class="empty">No providers configured.</div>`;
+          return providers.map(p => modelProviderCard(p));
+        }}
+      </div>
+      ${() => {
+        const guidance = state.models && state.models.guidance;
+        if (!guidance || !guidance.length) return '';
+        return html`<ul class="model-guidance">${guidance.map(g => html`<li>${g}</li>`.key(g))}</ul>`;
+      }}
+    </section>
+  `;
+}
+
+// ---- App ----
+
+function App() {
+  return html`
+    ${fleetSection()}
+    ${modelsSection()}
+    ${jobsSection()}
+    ${brainSection()}
+    ${flowSection()}
+  `;
+}
+
+App()(document.getElementById('app'));
+
+// ---- Polling: one setInterval per cadence, all paused while the tab is
+// hidden so a backgrounded dashboard doesn't hammer ssh probes. ----
+loadFleet();
+loadRuns();
+loadBrain();
+loadFlow();
+loadModels();
+setInterval(() => { if (!document.hidden) loadFleet(); }, 10000);
+setInterval(() => { if (!document.hidden) loadRuns(); }, 5000);
+setInterval(() => { if (!document.hidden) loadBrain(); }, 30000);
+setInterval(() => { if (!document.hidden) loadFlow(); }, 30000);
+// GET /api/models is itself cached server-side for 60s (see
+// modelsCacheTTL in models_web.go), so polling every 30s here mostly
+// hits that cache rather than re-running keychain/ssh/network probes.
+setInterval(() => { if (!document.hidden) loadModels(); }, 30000);
+
+// The polls above are gated on document.hidden so a forgotten background
+// tab does not keep firing ssh probes at the fleet. The cost of that is
+// stale data on return, so refresh once immediately when the tab becomes
+// visible rather than making the user wait out the next interval.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  loadBrain();
+  loadFleet();
+  loadFlow();
+  loadRuns();
+  loadModels();
+});
+</script>
+</body>
+</html>

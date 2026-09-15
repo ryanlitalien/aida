@@ -1,0 +1,7 @@
+voice,model,http_code,ttfb_ms,total_ms,bytes,file
+jarvis,eleven_multilingual_v2,200,2030,5272,601906,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/jarvis-eleven_multilingual_v2.mp3
+jarvis,eleven_flash_v2_5,200,401,1223,601070,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/jarvis-eleven_flash_v2_5.mp3
+jarvis,eleven_turbo_v2_5,200,402,1019,608593,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/jarvis-eleven_turbo_v2_5.mp3
+aida,eleven_multilingual_v2,200,2010,4698,543809,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/aida-eleven_multilingual_v2.mp3
+aida,eleven_flash_v2_5,200,430,1247,517896,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/aida-eleven_flash_v2_5.mp3
+aida,eleven_turbo_v2_5,200,461,989,521658,/Users/fakehome/Desktop/aida-voice-tests-2026-07-21/clips/aida-eleven_turbo_v2_5.mp3

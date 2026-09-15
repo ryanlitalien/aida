@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aida habits</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --border: #d8dee4;
+    --border-soft: #eaeef2;
+    --accent: #2b6cb0;
+    --today-border: #2b6cb0;
+    --today-bg: #eaf2fb;
+    --done-bg: #dcfce7;   --done-fg: #15803d;
+    --miss-bg: #fee2e2;   --miss-fg: #b91c1c;
+    --none-bg: #eef2f6;   --none-fg: #94a3b8;
+    --pct-good-bg: #dcfce7; --pct-good-fg: #15803d;
+    --pct-mid-bg: #fef3c7;  --pct-mid-fg: #92400e;
+    --pct-low-bg: #fee2e2;  --pct-low-fg: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 15.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 10px 16px 8px;
+  }
+  h1 {
+    font-size: 15px; font-weight: 600; margin: 0 0 8px; color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  header nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  header nav a.active { color: var(--fg); cursor: default; }
+
+  main { max-width: 1060px; margin: 0 auto; padding: 16px; padding-bottom: 48px; }
+
+  #content { overflow-x: auto; }
+
+  .dow-header {
+    display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); gap: 10px;
+    margin-bottom: 6px; font-size: 13px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em; text-align: center;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(130px, 1fr)); gap: 10px; }
+
+  .cell {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px; min-height: 128px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .cell.today { border-color: var(--today-border); border-width: 2px; background: var(--today-bg); padding: 9px; }
+
+  .cell-date { font-size: 14px; font-weight: 700; color: var(--fg); }
+  .cell-date .dow-mobile { display: none; color: var(--muted); font-weight: 600; margin-right: 5px; }
+
+  .indicators { display: flex; flex-direction: column; gap: 4px; flex: 1; justify-content: center; }
+  .ind-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .ind-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  button.ind-btn {
+    font: inherit; font-size: 14px; font-weight: 700; border: none; border-radius: 6px;
+    padding: 3px 8px; cursor: pointer; min-width: 40px; text-align: center;
+  }
+  button.ind-btn:disabled { opacity: 0.6; cursor: default; }
+  .state-done { background: var(--done-bg); color: var(--done-fg); }
+  .state-miss { background: var(--miss-bg); color: var(--miss-fg); }
+  .state-none { background: var(--none-bg); color: var(--none-fg); }
+
+  .pct-badge {
+    font-size: 14px; font-weight: 700; border-radius: 6px; padding: 3px 8px;
+    text-align: center; min-width: 40px;
+  }
+  .pct-good { background: var(--pct-good-bg); color: var(--pct-good-fg); }
+  .pct-mid  { background: var(--pct-mid-bg);  color: var(--pct-mid-fg); }
+  .pct-low  { background: var(--pct-low-bg);  color: var(--pct-low-fg); }
+  .pct-none { background: var(--none-bg);     color: var(--none-fg); }
+
+  @media (max-width: 699px) {
+    .dow-header { display: none; }
+    .grid { display: flex; flex-direction: column; gap: 8px; }
+    .cell {
+      flex-direction: row; align-items: center; justify-content: space-between;
+      min-height: 0; padding: 10px 12px;
+    }
+    .cell-date { flex: 0 0 auto; width: 76px; }
+    .cell-date .dow-mobile { display: inline; }
+    .indicators { flex-direction: row; gap: 10px; justify-content: flex-end; }
+    .ind-row { flex-direction: column; align-items: center; gap: 2px; }
+  }
+
+  .error-box {
+    background: var(--miss-bg); color: var(--miss-fg); border: 1px solid var(--miss-fg);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 16px;
+  }
+  .loading { text-align: center; color: var(--muted); padding: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aida habits</h1>
+  <nav id="site-nav">
+    <a href="/">Jarvis</a> &middot;
+    <a href="/tasks">Tasks</a> &middot;
+    <a href="/runs">Runs</a> &middot;
+    <a href="/dashboard">Dashboard</a> &middot;
+    <a href="/bifrost">Bifrost</a> &middot;
+    <a href="/menu">Menu</a> &middot;
+    <a class="active">Habits</a>
+  </nav>
+</header>
+<main>
+  <div id="error" hidden class="error-box"></div>
+  <div id="loading" class="loading">Loading habits...</div>
+  <div id="content" hidden>
+    <div class="dow-header">
+      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</main>
+<script>
+(function () {
+  var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function monthDay(dateStr) {
+    var parts = dateStr.split("-");
+    return MONTHS[parseInt(parts[1], 10) - 1] + " " + parseInt(parts[2], 10);
+  }
+
+  // dayNumber turns a YYYY-MM-DD string into an integer count of days since
+  // the Unix epoch (UTC), so calendar-week math below is plain integer
+  // arithmetic instead of Date-object/timezone juggling.
+  function dayNumber(dateStr) {
+    var parts = dateStr.split("-");
+    var utcMs = Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return Math.round(utcMs / 86400000);
+  }
+
+  function stateClass(state) {
+    if (state === "done") return "state-done";
+    if (state === "miss") return "state-miss";
+    return "state-none";
+  }
+
+  function stateGlyph(state) {
+    if (state === "done") return "✓"; // check
+    if (state === "miss") return "✗"; // cross
+    return "-"; // dash -- no data
+  }
+
+  function pctClass(pct) {
+    if (pct === null || pct === undefined) return "pct-none";
+    if (pct >= 80) return "pct-good";
+    if (pct >= 50) return "pct-mid";
+    return "pct-low";
+  }
+
+  function showError(msg) {
+    var el = document.getElementById("error");
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function clearError() {
+    document.getElementById("error").hidden = true;
+  }
+
+  function makeIndicatorButton(label, slug, day, state) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ind-btn " + stateClass(state);
+    btn.textContent = label + " " + stateGlyph(state);
+    btn.title = label + ": " + (state === "none" ? "no data (click to mark done)" : state) + " -- click to change";
+    btn.addEventListener("click", function () {
+      toggleHabit(slug, day.date, btn);
+    });
+    return btn;
+  }
+
+  function makeIndRow(label, el) {
+    var row = document.createElement("div");
+    row.className = "ind-row";
+    var lab = document.createElement("span");
+    lab.className = "ind-label";
+    lab.textContent = label;
+    row.appendChild(lab);
+    row.appendChild(el);
+    return row;
+  }
+
+  function makeCell(day) {
+    var cell = document.createElement("div");
+    cell.className = "cell" + (day.is_today ? " today" : "");
+
+    var dateEl = document.createElement("div");
+    dateEl.className = "cell-date";
+    var dowMobile = document.createElement("span");
+    dowMobile.className = "dow-mobile";
+    dowMobile.textContent = DOW[day.dow_index] || "";
+    dateEl.appendChild(dowMobile);
+    dateEl.appendChild(document.createTextNode(monthDay(day.date) + (day.is_today ? " (today)" : "")));
+    cell.appendChild(dateEl);
+
+    var indicators = document.createElement("div");
+    indicators.className = "indicators";
+    indicators.appendChild(makeIndRow("Gluten-free", makeIndicatorButton("GF", "no-gluten", day, day.gluten)));
+    indicators.appendChild(makeIndRow("Workout", makeIndicatorButton("WO", "workout", day, day.workout)));
+
+    var pctBadge = document.createElement("span");
+    pctBadge.className = "pct-badge " + pctClass(day.eating_pct);
+    pctBadge.textContent = (day.eating_pct === null || day.eating_pct === undefined) ? "-" : (day.eating_pct + "%");
+    pctBadge.title = day.eating_kcal ? (day.eating_kcal + " kcal logged") : "no food-diary entries logged that day";
+    indicators.appendChild(makeIndRow("Eating", pctBadge));
+
+    cell.appendChild(indicators);
+    return cell;
+  }
+
+  function render(data) {
+    document.getElementById("loading").hidden = true;
+    document.getElementById("content").hidden = false;
+
+    var grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    var days = data.days || []; // oldest first, as returned by /api/habits
+    if (!days.length) return;
+
+    // The most recent day (last in the oldest-first array) anchors the top
+    // calendar row. Every day's week-row is computed relative to it, so the
+    // newest week lands in row 1 with older weeks stacking downward, while
+    // weekday columns (Sun..Sat) stay fixed left-to-right -- e.g. today
+    // being a Tuesday sits in the 3rd column of row 1, not necessarily at
+    // the very start of the row.
+    var newest = days[days.length - 1];
+    var newestWeekSunday = dayNumber(newest.date) - newest.dow_index;
+
+    // Reverse to newest-first: this is also the DOM order the mobile
+    // single-column layout uses directly (no grid-row/column math there),
+    // so mobile shows a plain newest-to-oldest list.
+    var reversed = days.slice().reverse();
+    reversed.forEach(function (day) {
+      var cell = makeCell(day);
+      var dayWeekSunday = dayNumber(day.date) - day.dow_index;
+      var rowIndex = (newestWeekSunday - dayWeekSunday) / 7; // 0 = top/newest week
+      cell.style.gridColumn = String(day.dow_index + 1);
+      cell.style.gridRow = String(rowIndex + 1);
+      grid.appendChild(cell);
+    });
+  }
+
+  function loadHabits() {
+    fetch("/api/habits")
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().catch(function () { return {}; }).then(function (body) {
+            throw new Error(body.error || ("HTTP " + resp.status));
+          });
+        }
+        return resp.json();
+      })
+      .then(function (data) {
+        clearError();
+        render(data);
+      })
+      .catch(function (err) {
+        document.getElementById("loading").hidden = true;
+        showError("Couldn't load habits: " + err.message);
+      });
+  }
+
+  function toggleHabit(slug, date, btn) {
+    btn.disabled = true;
+    fetch("/api/habits/toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: slug, date: date }),
+    })
+      .then(function (resp) {
+        return resp.json().then(function (body) {
+          if (!resp.ok) { throw new Error(body.error || ("HTTP " + resp.status)); }
+          return body;
+        });
+      })
+      .then(function () {
+        clearError();
+        loadHabits();
+      })
+      .catch(function (err) {
+        showError("Couldn't update: " + err.message);
+        btn.disabled = false;
+      });
+  }
+
+  loadHabits();
+  setInterval(loadHabits, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>

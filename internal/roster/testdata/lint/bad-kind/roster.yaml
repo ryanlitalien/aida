@@ -1,0 +1,10 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    profiles: []
+
+  mystery:
+    kind: not-a-real-kind
+    description: bogus kind, should error
+    profiles: [work]

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LaunchAgent template for Aida / Jarvis.
+  Installed by `make jarvis-install-launchd`. Substitutions performed:
+    @AIDA_PATH@     absolute path to the `aida` binary
+    @HOME@          your home directory
+  Logs go to ~/.aida/jarvis/launchd.{out,err}.log so they don't
+  pollute the audit log.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple Inc.//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ryanlitalien.aida</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>@AIDA_PATH@</string>
+    <string>serve</string>
+    <string>--http</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+    <key>Crashed</key>
+    <true/>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>@HOME@</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>@HOME@/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>@HOME@</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>@HOME@/.aida/jarvis/launchd.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>@HOME@/.aida/jarvis/launchd.err.log</string>
+
+  <!-- ProcessType=Interactive helps macOS treat this as a user-facing
+       agent, which avoids aggressive throttling under battery saver. -->
+  <key>ProcessType</key>
+  <string>Interactive</string>
+</dict>
+</plist>

@@ -1,0 +1,616 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}</style></head><body>
+<title>aida · system map &amp; gap analysis</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --surface2: #eef1f4;
+    --ink: #1a232d;
+    --muted: #5c6d7e;
+    --line: #d7dfe6;
+    --accent: #17798f;
+    --accent-soft: #d9edf1;
+    --amber: #a06a14;
+    --ok: #2e7d51;
+    --ok-bg: #ddeee5;
+    --warn: #a66b1f;
+    --warn-bg: #f2e6d2;
+    --crit: #ad4438;
+    --crit-bg: #f4ded9;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e141a;
+      --surface: #151d25;
+      --surface2: #1b242e;
+      --ink: #e2e9ef;
+      --muted: #8da0b2;
+      --line: #273543;
+      --accent: #58c3d7;
+      --accent-soft: #12333b;
+      --amber: #dfa757;
+      --ok: #6fbf8f;
+      --ok-bg: #14301f;
+      --warn: #d9a054;
+      --warn-bg: #33270f;
+      --crit: #e08373;
+      --crit-bg: #3a1c15;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e141a; --surface: #151d25; --surface2: #1b242e; --ink: #e2e9ef;
+    --muted: #8da0b2; --line: #273543; --accent: #58c3d7; --accent-soft: #12333b;
+    --amber: #dfa757; --ok: #6fbf8f; --ok-bg: #14301f; --warn: #d9a054;
+    --warn-bg: #33270f; --crit: #e08373; --crit-bg: #3a1c15;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6f8; --surface: #ffffff; --surface2: #eef1f4; --ink: #1a232d;
+    --muted: #5c6d7e; --line: #d7dfe6; --accent: #17798f; --accent-soft: #d9edf1;
+    --amber: #a06a14; --ok: #2e7d51; --ok-bg: #ddeee5; --warn: #a66b1f;
+    --warn-bg: #f2e6d2; --crit: #ad4438; --crit-bg: #f4ded9;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    line-height: 1.55;
+    margin: 0;
+    padding: 0 1.25rem 5rem;
+  }
+  .wrap { max-width: 72rem; margin: 0 auto; }
+  .prose { max-width: 46rem; }
+
+  header.masthead {
+    padding: 3.5rem 0 2rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 0.75rem;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 0 0 0.75rem;
+    text-wrap: balance;
+  }
+  .verdict {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 52rem;
+    margin: 0;
+  }
+  .verdict strong { color: var(--ink); }
+
+  .facts {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.5rem;
+  }
+  .facts span b { color: var(--ink); font-weight: 600; }
+
+  section { margin-bottom: 3.5rem; }
+  h2 {
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    font-weight: 650;
+    margin: 0 0 0.35rem;
+  }
+  h2 .num { color: var(--accent); margin-right: 0.5rem; }
+  .sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 1.25rem; max-width: 52rem; }
+
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  pre.mermaid { margin: 0; display: flex; justify-content: center; }
+
+  .legend {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.6rem;
+  }
+  .swatch {
+    display: inline-block; width: 0.7em; height: 0.7em;
+    border-radius: 2px; margin-right: 0.3em; vertical-align: baseline;
+  }
+
+  /* hero flow */
+  .flow-scroll { overflow-x: auto; padding-bottom: 0.25rem; }
+  .flow, .flow-return { min-width: 68rem; }
+  .flow { display: flex; align-items: stretch; }
+  .stage {
+    flex: 1 1 0;
+    min-width: 9rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.75rem 0.85rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .stage .shead {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    font-weight: 650;
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+  .stage .shead .n { color: var(--accent); font-size: 0.68rem; }
+  .stage ul {
+    margin: 0; padding: 0; list-style: none;
+    font-size: 0.74rem; color: var(--muted); line-height: 1.5;
+  }
+  .stage ul li::before { content: "· "; color: var(--accent); }
+  .llmchip {
+    margin-top: auto;
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    background: var(--warn-bg);
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+  }
+  .conn {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    color: var(--accent);
+    padding: 0 0.2rem;
+  }
+  .conn svg { display: block; }
+  .flow-return { position: relative; height: 3.2rem; margin-top: 0.15rem; }
+  .ret {
+    position: absolute;
+    left: 41.7%; right: 8.3%;
+    top: 0; height: 1.45rem;
+    border: 1.5px dashed var(--accent);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    opacity: 0.6;
+  }
+  .ret::before {
+    content: "▲";
+    position: absolute;
+    left: -0.45em; top: -0.8em;
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+  .ret-label {
+    position: absolute;
+    left: 30%; right: 0;
+    top: 1.8rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+
+  /* scorecard */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.6rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.7rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .card .name { font-weight: 600; font-size: 0.9rem; }
+  .card .note { color: var(--muted); font-size: 0.8rem; line-height: 1.4; }
+  .chip {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.12rem 0.45rem;
+    border-radius: 999px;
+  }
+  .chip.ok   { color: var(--ok);   background: var(--ok-bg); }
+  .chip.warn { color: var(--warn); background: var(--warn-bg); }
+  .chip.crit { color: var(--crit); background: var(--crit-bg); }
+
+  /* gaps */
+  .gap-theme { margin-bottom: 1.75rem; }
+  .gap-theme h3 {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 650;
+    margin: 0 0 0.6rem;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.86rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tablewrap { overflow-x: auto; border-radius: 6px; }
+  th, td {
+    text-align: left;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  th {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    background: var(--surface2);
+  }
+  td.sev { white-space: nowrap; width: 5.5rem; }
+  td.ref { font-family: var(--mono); font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--surface2);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.25rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  a { color: var(--accent); }
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">system map · 2026-07-20 · UI intentionally excluded</p>
+  <h1>aida: how done is it?</h1>
+  <p class="verdict"><strong>Verdict: the architecture is complete; the remaining work is trust, not construction.</strong> Every subsystem you listed exists and is wired end to end. What is missing clusters into five themes: safety rails for autonomy, closing the learning loop into routing, self-observability and cost, multi-device hygiene, and fleet awareness.</p>
+  <div class="facts">
+    <span><b>30</b> subcommands</span>
+    <span><b>6</b>-step engine, <b>4</b> LLM calls</span>
+    <span><b>15</b> source adapters</span>
+    <span><b>11</b> MCP server tools</span>
+    <span><b>20+</b> voice tools</span>
+    <span><b>3</b> repos (code / config / brain)</span>
+    <span><b>3</b> machines running serve</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">01</span>The flow, end to end</h2>
+  <p class="sub">The life of one question, from capture to learned lesson. Amber chips mark the four LLM calls; everything between them is deterministic Go.</p>
+  <div class="flow-scroll">
+    <div class="flow">
+      <div class="stage">
+        <div class="shead"><span class="n">1</span>capture</div>
+        <ul>
+          <li>🎙 wake phrase → whisper STT</li>
+          <li>⌨ terminal · aida "question"</li>
+          <li>🔌 MCP stdio · HTTP :1610</li>
+        </ul>
+      </div>
+      <div class="conn"><svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M0 6 H16 M12 1.5 L17 6 L12 10.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <div class="stage">
+        <div class="shead"><span class="n">2</span>understand</div>
+        <ul>
+          <li>parse → Intent struct</li>
+          <li>classify · ARI regex, strategy</li>
+          <li>resolve · partners + tokens</li>
+        </ul>
+        <span class="llmchip">LLM ①</span>
+      </div>
+      <div class="conn"><svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M0 6 H16 M12 1.5 L17 6 L12 10.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <div class="stage">
+        <div class="shead"><span class="n">3</span>route</div>
+        <ul>
+          <li>rank sources · +50 partner</li>
+          <li>lessons apply ±50</li>
+          <li>router picks the subset</li>
+        </ul>
+        <span class="llmchip">LLM ②</span>
+      </div>
+      <div class="conn"><svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M0 6 H16 M12 1.5 L17 6 L12 10.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <div class="stage">
+        <div class="shead"><span class="n">4</span>execute</div>
+        <ul>
+          <li>per-source query generation</li>
+          <li>parallel fan-out, ≤5 at once</li>
+          <li>snowflake · brave · grep · mcp …</li>
+        </ul>
+        <span class="llmchip">LLM ③</span>
+      </div>
+      <div class="conn"><svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M0 6 H16 M12 1.5 L17 6 L12 10.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <div class="stage">
+        <div class="shead"><span class="n">5</span>answer</div>
+        <ul>
+          <li>synthesize + citations</li>
+          <li>spoken via Piper on voice</li>
+          <li>run log saved</li>
+        </ul>
+        <span class="llmchip">LLM ④</span>
+      </div>
+      <div class="conn"><svg width="22" height="12" viewBox="0 0 22 12" fill="none" aria-hidden="true"><path d="M0 6 H16 M12 1.5 L17 6 L12 10.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+      <div class="stage">
+        <div class="shead"><span class="n">6</span>learn</div>
+        <ul>
+          <li>thumbs up / down / note</li>
+          <li>lessons + Learnings → brain</li>
+          <li>auto-commit → all machines</li>
+        </ul>
+      </div>
+    </div>
+    <div class="flow-return">
+      <div class="ret"></div>
+      <div class="ret-label">feedback returns: lessons re-weight routing on the next similar question</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span>Runtime topology</h2>
+  <p class="sub">Everything hangs off two shapes: the one-shot engine (per query) and the always-on <code>aida serve</code> daemon (voice, HTTP, jobs, loop dispatcher). Memory is shared by all of it.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  TERM["⌨ terminal · aida query"]
+  MIC["🎙 mic + SayoDevice PTT"]
+  CC["Claude Code / any MCP client (stdio)"]
+  BROWSER["browser · :1610/tasks"]
+
+  subgraph DAEMON["aida serve · daemon on 127.0.0.1:1610"]
+    HTTPR["/tasks · /jarvis/* · /mcp/call · /healthz"]
+    JARVIS["Jarvis: ffmpeg → VAD → whisper tiny.en → Haiku → Piper TTS"]
+    VTOOLS["voice tools ×20: tasks, jobs, memory, mcp, ratings"]
+    WATCHER["jobs watcher · speak-on-next-wake"]
+    MCPCLI["MCP client discovery"]
+    LOOPD["in-process loop dispatcher"]
+  end
+
+  MCPSRV["aida MCP server · 11 tools"]
+
+  subgraph ENG["engine · one-shot per query"]
+    ENGINE["6-step pipeline · 4 LLM calls"]
+    ADAPTERS["15 source adapters: snowflake · chrono · notion · git · grep · web_search · exec · mcp_tool …"]
+  end
+
+  subgraph AUTONOMY["autonomy"]
+    JOBS["jobs queue · SQLite per profile"]
+    AGENT["aida --agent · orchestrator + ask_user"]
+    LOOP["aida loop · task → fresh agent → checks → done/PR"]
+    WTREES["git worktrees"]
+    SBX["sbx docker microVM sandbox"]
+    CLOUDA["Anthropic Managed Agents (deprecated)"]
+  end
+
+  subgraph MEMORY["memory · ~/.aida"]
+    BRAINDB["brain.db · SQLite + Voyage embeddings"]
+    BRAINREPO["brain git repo · lessons, entities, knowledge, tasks, audit"]
+    RUNLOGS["runs/ · job manifests · audit.ndjson"]
+  end
+
+  subgraph EXTERNAL["external"]
+    ANTHAPI["Anthropic API · Haiku 4.5"]
+    VOYAGE["Voyage AI · voyage-4-lite"]
+    BRAVE["Brave Search"]
+    OLLAMA["Ollama offline fallback"]
+    EXTMCP["external MCP servers"]
+    GITHUB["GitHub · gh CLI"]
+    GHBRAIN["GitHub aida-brain repo"]
+  end
+
+  DEVICES["edith · photon (other machines)"]
+
+  TERM --> ENGINE
+  MIC --> JARVIS
+  BROWSER --> HTTPR
+  CC --> MCPSRV
+  MCPSRV -->|proxy /mcp/call| HTTPR
+  JARVIS --> VTOOLS
+  VTOOLS -->|aida_query subprocess| ENGINE
+  VTOOLS --> JOBS
+  VTOOLS --> MCPCLI
+  MCPCLI --> EXTMCP
+  WATCHER --> JARVIS
+  LOOPD --> LOOP
+
+  ENGINE --> ADAPTERS
+  ENGINE --> ANTHAPI
+  ENGINE -.-> OLLAMA
+  ENGINE -->|save run| RUNLOGS
+  BRAINDB -.->|recall + lessons| ENGINE
+  ENGINE -->|new lessons| BRAINREPO
+  ADAPTERS --> BRAVE
+
+  JOBS --> AGENT
+  LOOP --> AGENT
+  AGENT --> WTREES
+  LOOP --> SBX
+  LOOP -->|pr + review panel| GITHUB
+  AGENT --> CLOUDA
+  AGENT --> ANTHAPI
+  JARVIS --> ANTHAPI
+  LOOP -->|Learnings| BRAINREPO
+
+  BRAINREPO -->|index + embed| BRAINDB
+  BRAINDB --> VOYAGE
+  BRAINREPO -->|auto-commit · detached push| GHBRAIN
+  GHBRAIN --> DEVICES
+
+  classDef store fill:#82c7d5,stroke:#2b7787,color:#10242a;
+  classDef ext fill:#c2ccd5,stroke:#7c8a96,color:#1d242b;
+  class BRAINDB,BRAINREPO,RUNLOGS,JOBS store;
+  class ANTHAPI,VOYAGE,BRAVE,OLLAMA,EXTMCP,GITHUB,GHBRAIN ext;
+</pre>
+  </div>
+  <p class="legend"><span class="swatch" style="background:#82c7d5"></span>data store &nbsp;&nbsp; <span class="swatch" style="background:#c2ccd5"></span>external service</p>
+</section>
+
+<section>
+  <h2><span class="num">03</span>The query pipeline</h2>
+  <p class="sub">LLM at the edges, deterministic middle. Amber nodes are LLM calls: there are four, not the three the docs claim (the router was added later; <code>plans/drift-fix-plan.md</code> flags this).</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  Q["question"] --> PARSE["1 · parse → Intent"]
+  PARSE --> CLASSIFY["2 · classify · ARI regex + strategy"]
+  CLASSIFY --> RESOLVE["3 · resolve · partners, checkout tokens"]
+  RESOLVE --> PLAN["4 · plan · rank sources, +50 partner boost"]
+  PLAN --> ROUTE["4b · route · pick source subset"]
+  ROUTE --> EXECUTE["5 · execute · parallel fan-out ≤5"]
+  EXECUTE --> SYNTH["6 · synthesize · cited answer"]
+  SYNTH --> OUT["answer + saved run"]
+  LESSONS["thumbs-down lessons"] -. "deterministic ±50" .-> ROUTE
+  OUT -->|"aida thumbs-up / thumbs-down --because"| LESSONS
+  classDef llm fill:#e9b666,stroke:#8a6420,color:#241c10;
+  class PARSE,ROUTE,EXECUTE,SYNTH llm;
+</pre>
+  </div>
+  <p class="legend"><span class="swatch" style="background:#e9b666"></span>LLM call (Haiku by default, per-stage overrides in config)</p>
+</section>
+
+<section>
+  <h2><span class="num">04</span>The two loops that make it self-improving</h2>
+  <p class="sub">The feedback loop tunes routing and voice behavior from ratings. The autonomy loop drains the task queue with fresh-context agents and distills learnings back into the brain.</p>
+  <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph FB["feedback loop"]
+    TURN["any turn · voice or CLI"] --> RATE["thumbs up / down · note"]
+    RATE --> JLESS["jarvis_lessons · embedded"]
+    RATE -->|"run-id passthrough"| ELESS["engine lessons"]
+    JLESS -. "top-3 recall into next system prompt" .-> TURN
+    ELESS -. "router ±50 on next similar query" .-> TURN
+  end
+  subgraph AL["autonomy loop"]
+    TASKS["tasks · 6 statuses"] --> PICK["loop picks highest priority"]
+    PICK --> FRESH["fresh agent + brain recall k=3"]
+    FRESH --> GATE["--check quality gates"]
+    GATE -->|pass| SHIP["done · or PR + review panel"]
+    GATE -->|"fail ×3"| PARK["parked on hold"]
+    SHIP --> DISTILL["Learnings → brain"]
+    DISTILL -. "seeds next similar task" .-> FRESH
+  end
+  classDef store fill:#82c7d5,stroke:#2b7787,color:#10242a;
+  class JLESS,ELESS,TASKS store;
+</pre>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>Subsystem scorecard</h2>
+  <p class="sub">Everything on your checklist, plus the things a checklist would not surface.</p>
+  <div class="grid">
+    <div class="card"><span class="chip ok">shipped</span><span class="name">Capture surfaces</span><span class="note">CLI, mic + wake words, PTT, MCP stdio, HTTP :1610, two personas</span></div>
+    <div class="card"><span class="chip ok">shipped</span><span class="name">Routing engine</span><span class="note">6-step pipeline, partner resolution, golden regression suite</span></div>
+    <div class="card"><span class="chip ok">shipped</span><span class="name">Memory / brain</span><span class="note">SQLite + Voyage embeddings, git-backed, auto-sync across machines</span></div>
+    <div class="card"><span class="chip ok">shipped</span><span class="name">Web search + MCP both ways</span><span class="note">Brave adapter; 11-tool server; client discovery of external servers</span></div>
+    <div class="card"><span class="chip ok">shipped</span><span class="name">Agents + spawning</span><span class="note">jobs queue, ask_user pause, worktrees, docker microVM, loop → PR</span></div>
+    <div class="card"><span class="chip ok">shipped</span><span class="name">CI + release</span><span class="note">build/vet/test + auto minor-version goreleaser on main (task #12 is closable)</span></div>
+    <div class="card"><span class="chip warn">hardening</span><span class="name">Learning loop closure</span><span class="note">brain recall not consulted during routing; memory bridge is one-way</span></div>
+    <div class="card"><span class="chip warn">hardening</span><span class="name">Autonomy rails</span><span class="note">--dry-run ignored in agent mode; exec sources fire unconfirmed</span></div>
+    <div class="card"><span class="chip warn">hardening</span><span class="name">Multi-device hygiene</span><span class="note">edith + photon need reembed (#101); auto-commit vs rebase (#47)</span></div>
+    <div class="card"><span class="chip warn">hardening</span><span class="name">Voice latency</span><span class="note">no fast-path for trivial queries; whisper untuned; email search slow</span></div>
+    <div class="card"><span class="chip crit">missing</span><span class="name">Observability + cost</span><span class="note">no metrics, no persistent cost ledger; OTel unwired; runs/ + audit only</span></div>
+    <div class="card"><span class="chip crit">missing</span><span class="name">Fleet awareness</span><span class="note">minty-agents / Bifrost invisible to aida; spawning story lives outside (#102)</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">06</span>Gap analysis, by theme</h2>
+  <p class="sub">Ordered by what I would fix first. Severity is about blast radius for an always-on autonomous system, not code difficulty.</p>
+
+  <div class="gap-theme">
+    <h3>Theme 1 · Trust rails for autonomy</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
+      <tr><td class="sev"><span class="chip crit">crit</span></td><td><code>--dry-run</code> is silently ignored in agent mode; tools execute for real</td><td class="ref">#92</td></tr>
+      <tr><td class="sev"><span class="chip crit">crit</span></td><td>Side-effecting exec sources auto-execute with no confirmation guard</td><td class="ref">#93</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>No persistent cost ledger; spend across loop/jobs/cloud is untracked between runs</td><td class="ref">#111</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Privacy: partner ARIs + work identifiers live in aida-config / brain git history on personal GitHub</td><td class="ref">tasks #200 #201 #202</td></tr>
+    </table></div>
+  </div>
+
+  <div class="gap-theme">
+    <h3>Theme 2 · The learning loop is not closed</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Brain recall is never consulted during query routing; only lessons boosts are wired. The brain learns, the router does not read it</td><td class="ref">#112</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Claude memory bridge is one-way: capture works, reverse projection to <code>~/.claude/memory</code> still future; CC memories not used in decisioning</td><td class="ref">#113 · #39</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Consolidation can promote a single-event hallucination into a durable fact</td><td class="ref">#85</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Loop still uses the generic task-ingest prompt; no dependency ordering or one-iteration sizing</td><td class="ref">#114</td></tr>
+    </table></div>
+  </div>
+
+  <div class="gap-theme">
+    <h3>Theme 3 · Operational blind spots</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
+      <tr><td class="sev"><span class="chip crit">crit</span></td><td>No self-observability: no /metrics, no counters, OTel only inside the orchestrator with no exporter</td><td class="ref">#115</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Jobs cannot be cancelled from the terminal, only by voice; vacuum cannot be scoped</td><td class="ref">#103 #104</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Zero tests: internal/cloud (9 files), dailybriefing gws pipeline, index, ui</td><td class="ref">#116</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Doc drift: CLAUDE.md covers 8 of ~30 subcommands; "3 LLM calls" is actually 4; stale loop.go phase comment</td><td class="ref">#117</td></tr>
+    </table></div>
+  </div>
+
+  <div class="gap-theme">
+    <h3>Theme 4 · Multi-device + fleet</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>edith + photon still on old embeddings; each needs <code>aida brain reembed</code></td><td class="ref">#101</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>Brain auto-commit hook can clobber rebase state (silent commits on detached HEAD)</td><td class="ref">#47</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>The minty-agents fleet + Bifrost do not exist anywhere in aida's code or sources; spawning long-lived agents is a parallel system aida cannot see or query</td><td class="ref">#102</td></tr>
+    </table></div>
+  </div>
+
+  <div class="gap-theme">
+    <h3>Theme 5 · Polish</h3>
+    <div class="tablewrap"><table>
+      <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
+      <tr><td class="sev"><span class="chip ok">nice</span></td><td>Voice latency: fast-path time/date past the Haiku round-trip; in-process email search; whisper tuning</td><td class="ref">tasks #208 #209 · #75</td></tr>
+      <tr><td class="sev"><span class="chip ok">nice</span></td><td>day_summary has no calendar (registry TODO); library missing 116/131 repos; no --output json; no streaming</td><td class="ref">#36 #35 #30</td></tr>
+    </table></div>
+  </div>
+</section>
+
+<footer>
+  sources: repo sweep of ryanlitalien/aida @ main (d415c92) · aida-implementation-plan.md (since deleted in the open-source scrub) · docs/ + plans/ · open issues + tasks · ~/.aida on this machine
+</footer>
+
+</div>
+
+
+
+</body></html>

@@ -1,0 +1,11 @@
+# Worked example: a "codebase" source. Aida greps/reads this path's CLAUDE.md
+# (or README.md) for context and can shell out into the repo for deeper
+# questions. Edit `path` to point at a real checkout on your machine, or
+# delete this file if you don't have a codebase you want Aida to know about.
+path: ~/dev/avengers-hq
+type: codebase
+example: true
+context: CLAUDE.md
+description: Mission-control codebase for coordinating Avengers deployments.
+capabilities: [code-search, architecture]
+entities: [avengers, quinjet, helicarrier]

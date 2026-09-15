@@ -1,0 +1,38 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    call_sign: Aida
+    description: Chief of staff and front door.
+    profiles: []
+
+  qa:
+    kind: subagent
+    call_sign: QA
+    description: Quality assurance subagent.
+    profiles: [work]
+    subagent:
+      dir: testdata/lint/good/subagent-dir
+      agent: qa
+
+  workouts:
+    kind: source
+    call_sign: Coach
+    description: Personal trainer and nutrition source.
+    profiles: [home]
+    source:
+      source: workouts
+
+  slack:
+    kind: mcp
+    call_sign: Slack
+    description: Slack MCP passthrough.
+    mcp:
+      server: slack
+
+  researcher:
+    kind: job
+    call_sign: Researcher
+    description: Background research job.
+    job:
+      kind: investigate

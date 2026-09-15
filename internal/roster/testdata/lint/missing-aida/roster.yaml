@@ -1,0 +1,8 @@
+version: 1
+entries:
+  workouts:
+    kind: source
+    description: no aida entry anywhere in this file
+    profiles: [home]
+    source:
+      source: workouts

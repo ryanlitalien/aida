@@ -1,0 +1,21 @@
+config,model,query_params,rep,http_code,ttfb_ms,total_ms,bytes
+multilingual_v2 (current),eleven_multilingual_v2,,1,200,808,844,42258
+multilingual_v2 (current),eleven_multilingual_v2,,2,200,856,887,42258
+multilingual_v2 (current),eleven_multilingual_v2,,3,200,801,827,42258
+multilingual_v2 (current),eleven_multilingual_v2,,4,200,793,839,42258
+multilingual_v2 (current),eleven_multilingual_v2,,5,200,877,919,42258
+flash_v2_5,eleven_flash_v2_5,,1,200,505,601,41422
+flash_v2_5,eleven_flash_v2_5,,2,200,300,388,41422
+flash_v2_5,eleven_flash_v2_5,,3,200,261,342,40587
+flash_v2_5,eleven_flash_v2_5,,4,200,233,326,41422
+flash_v2_5,eleven_flash_v2_5,,5,200,596,622,42258
+turbo_v2_5,eleven_turbo_v2_5,,1,200,268,296,41422
+turbo_v2_5,eleven_turbo_v2_5,,2,200,336,365,41422
+turbo_v2_5,eleven_turbo_v2_5,,3,200,320,369,40169
+turbo_v2_5,eleven_turbo_v2_5,,4,200,285,314,41422
+turbo_v2_5,eleven_turbo_v2_5,,5,200,337,390,42258
+flash_v2_5 + osl=3,eleven_flash_v2_5,optimize_streaming_latency=3,1,200,321,394,41422
+flash_v2_5 + osl=3,eleven_flash_v2_5,optimize_streaming_latency=3,2,200,491,517,40587
+flash_v2_5 + osl=3,eleven_flash_v2_5,optimize_streaming_latency=3,3,200,247,308,42258
+flash_v2_5 + osl=3,eleven_flash_v2_5,optimize_streaming_latency=3,4,200,225,284,41422
+flash_v2_5 + osl=3,eleven_flash_v2_5,optimize_streaming_latency=3,5,200,297,388,41422

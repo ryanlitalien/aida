@@ -1,0 +1,12 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    profiles: []
+
+  ghost-source:
+    kind: source
+    description: points at a source that doesn't exist
+    profiles: [work]
+    source:
+      source: nonexistent-source-xyz

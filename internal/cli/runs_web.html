@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aida runs</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --row-alt: #fafbfc;
+    --row-hover: #f0f4f8;
+    --sel: #e0ecff;
+    --border: #d8dee4;
+    --border-soft: #eaeef2;
+    --accent: #2b6cb0;
+    --chip-bg: #eef2f6;
+    --chip-fg: #334155;
+    /* state colors (reuse the tasks palette family) */
+    --st-queued-bg: #e5e7eb;          --st-queued-fg: #4b5563;
+    --st-running-bg: #ede9fe;         --st-running-fg: #6d28d9;
+    --st-awaiting_input-bg: #fef3c7;  --st-awaiting_input-fg: #92400e;
+    --st-awaiting_approval-bg: #fee2e2; --st-awaiting_approval-fg: #b91c1c;
+    --st-done-bg: #dcfce7;            --st-done-fg: #15803d;
+    --st-failed-bg: #fee2e2;          --st-failed-fg: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  header nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  header nav a.active { color: var(--fg); cursor: default; }
+  header .spacer { flex: 1; }
+  select, button {
+    font: inherit; color: var(--fg); background: var(--card);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: var(--row-hover); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.danger { color: #b91c1c; border-color: #f3c1c1; }
+  .muted { color: var(--muted); }
+
+  main { display: grid; grid-template-columns: minmax(280px, 38%) 1fr; gap: 0; height: calc(100vh - 53px); }
+  #list { overflow-y: auto; border-right: 1px solid var(--border); }
+  #detail { overflow-y: auto; padding: 16px; }
+
+  .run {
+    padding: 10px 14px; border-bottom: 1px solid var(--border-soft); cursor: pointer;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .run:nth-child(even) { background: var(--row-alt); }
+  .run:hover { background: var(--row-hover); }
+  .run.sel { background: var(--sel); }
+  .run .top { display: flex; align-items: center; gap: 8px; }
+  .run .handle { font-weight: 600; }
+  .run .q { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run .age { margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--chip-fg); text-transform: none;
+  }
+  .kind { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; }
+
+  #detail h2 { font-size: 15px; margin: 0 0 2px; }
+  #detail .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; word-break: break-all; }
+  #detail .controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .events {
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #0d1117; color: #c9d1d9; border-radius: 8px; padding: 12px;
+    white-space: pre-wrap; word-break: break-word; min-height: 120px;
+  }
+  .events .ev { display: block; }
+  .events .ev.tool { color: #79c0ff; }
+  .events .ev.verbose { color: #8b949e; }
+  .events .ev.await { color: #e3b341; }
+  .events .ev.done { color: #56d364; }
+  .events .ev.err { color: #ff7b72; }
+  .reply { margin-top: 12px; display: none; gap: 8px; }
+  .reply.show { display: flex; }
+  .reply input { flex: 1; }
+  .empty { color: var(--muted); padding: 40px 16px; text-align: center; }
+  #flash {
+    position: fixed; bottom: 16px; right: 16px; padding: 8px 14px; border-radius: 8px;
+    background: #111827; color: #fff; opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  #flash.show { opacity: .95; }
+  #flash.err { background: #b91c1c; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aida runs</h1>
+  <nav>
+    <a href="/">Jarvis</a> &middot;
+    <a href="/tasks">Tasks</a> &middot;
+    <a class="active">Runs</a> &middot;
+    <a href="/dashboard">Dashboard</a> &middot;
+    <a href="/bifrost">Bifrost</a> &middot;
+    <a href="/menu">Menu</a> &middot;
+    <a href="/habits">Habits</a>
+  </nav>
+  <span class="spacer"></span>
+  <label class="muted">Show
+    <select id="stateFilter">
+      <option value="active" selected>Active</option>
+      <option value="all">All</option>
+      <option value="running">Running</option>
+      <option value="awaiting_input">Awaiting input</option>
+      <option value="done">Done</option>
+      <option value="failed">Failed</option>
+    </select>
+  </label>
+  <span id="prof" class="muted"></span>
+  <button id="refresh">Refresh</button>
+</header>
+
+<main>
+  <div id="list"></div>
+  <div id="detail"><div class="empty">Select a run to watch it live.</div></div>
+</main>
+
+<div id="flash"></div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  let runs = [];
+  let selected = null;   // selected runID
+  let src = null;        // active EventSource
+
+  function flash(kind, msg) {
+    const f = $("#flash");
+    f.textContent = msg;
+    f.className = (kind === "err" ? "err " : "") + "show";
+    setTimeout(() => { f.className = f.className.replace("show", "").trim(); }, 2600);
+  }
+
+  function ago(ts) {
+    if (!ts) return "";
+    const t = Date.parse(ts);
+    if (isNaN(t)) return "";
+    let s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (s < 60) return s + "s";
+    if (s < 3600) return Math.floor(s / 60) + "m";
+    if (s < 86400) return Math.floor(s / 3600) + "h";
+    return Math.floor(s / 86400) + "d";
+  }
+
+  function badge(state) {
+    const span = document.createElement("span");
+    span.className = "badge";
+    span.style.background = `var(--st-${state}-bg, var(--chip-bg))`;
+    span.style.color = `var(--st-${state}-fg, var(--chip-fg))`;
+    span.textContent = state.replace(/_/g, " ");
+    return span;
+  }
+
+  async function load() {
+    const state = $("#stateFilter").value;
+    try {
+      const resp = await fetch("/api/runs?state=" + encodeURIComponent(state));
+      const data = await resp.json();
+      runs = data.runs || [];
+      $("#prof").textContent = data.active_profile ? "profile: " + data.active_profile : "";
+      renderList();
+      // Keep the detail pane's state controls fresh (e.g. a job that just
+      // transitioned to awaiting_input or a terminal state).
+      if (selected) {
+        const cur = runs.find((r) => r.RunID === selected);
+        if (cur) refreshDetailControls(cur);
+      }
+    } catch (e) {
+      flash("err", "Failed to load runs: " + e.message);
+    }
+  }
+
+  function renderList() {
+    const list = $("#list");
+    if (!runs.length) {
+      list.innerHTML = '<div class="empty">No runs match this filter.</div>';
+      return;
+    }
+    list.innerHTML = "";
+    for (const r of runs) {
+      const div = document.createElement("div");
+      div.className = "run" + (r.RunID === selected ? " sel" : "");
+      div.onclick = () => select(r.RunID);
+
+      const top = document.createElement("div");
+      top.className = "top";
+      const h = document.createElement("span");
+      h.className = "handle";
+      h.textContent = r.Handle || r.RunID;
+      top.appendChild(h);
+      const k = document.createElement("span");
+      k.className = "kind";
+      k.textContent = r.Kind || "agent";
+      top.appendChild(k);
+      top.appendChild(badge(r.State));
+      const age = document.createElement("span");
+      age.className = "age";
+      age.textContent = ago(r.StartedAt && !r.StartedAt.startsWith("0001") ? r.StartedAt : r.EnqueuedAt);
+      top.appendChild(age);
+      div.appendChild(top);
+
+      const q = document.createElement("div");
+      q.className = "q";
+      q.textContent = r.TaskSlug || r.Question || "(no description)";
+      div.appendChild(q);
+
+      list.appendChild(div);
+    }
+  }
+
+  function select(runID) {
+    selected = runID;
+    renderList();
+    const r = runs.find((x) => x.RunID === runID);
+    if (!r) return;
+    renderDetail(r);
+  }
+
+  function renderDetail(r) {
+    if (src) { src.close(); src = null; }
+    const d = $("#detail");
+    d.innerHTML = "";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = r.Handle || r.RunID;
+    d.appendChild(h2);
+
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = (r.Kind || "agent") + " · " + r.RunID + (r.Question ? " · " + r.Question : "");
+    d.appendChild(sub);
+
+    const controls = document.createElement("div");
+    controls.className = "controls";
+    controls.id = "controls";
+    d.appendChild(controls);
+
+    const log = document.createElement("div");
+    log.className = "events";
+    log.id = "events";
+    log.textContent = "connecting to live stream…";
+    d.appendChild(log);
+
+    const reply = document.createElement("div");
+    reply.className = "reply";
+    reply.id = "reply";
+    const input = document.createElement("input");
+    input.id = "replyText";
+    input.placeholder = "Reply to the paused agent…";
+    input.onkeydown = (e) => { if (e.key === "Enter") sendInput(r.RunID); };
+    const send = document.createElement("button");
+    send.className = "primary";
+    send.textContent = "Send";
+    send.onclick = () => sendInput(r.RunID);
+    reply.appendChild(input);
+    reply.appendChild(send);
+    d.appendChild(reply);
+
+    refreshDetailControls(r);
+    streamEvents(r.RunID, log);
+  }
+
+  // refreshDetailControls (re)renders the Cancel button and awaiting-input
+  // reply box based on the run's current state, without tearing down the
+  // live event stream.
+  function refreshDetailControls(r) {
+    if (selected !== r.RunID) return;
+    const controls = $("#controls");
+    if (!controls) return;
+    controls.innerHTML = "";
+    controls.appendChild(badge(r.State));
+
+    const terminal = r.State === "done" || r.State === "failed" || r.State === "incomplete";
+    if (!terminal) {
+      const cancel = document.createElement("button");
+      cancel.className = "danger";
+      cancel.textContent = "Cancel run";
+      cancel.onclick = () => cancelRun(r.RunID);
+      controls.appendChild(cancel);
+    }
+    if (r.State === "done") {
+      const out = document.createElement("button");
+      out.textContent = "View output";
+      out.onclick = () => window.open("/api/runs/" + encodeURIComponent(r.RunID) + "/output", "_blank");
+      controls.appendChild(out);
+    }
+    if (r.AwaitingPrompt) {
+      const p = document.createElement("span");
+      p.className = "muted";
+      p.textContent = "Asking: " + r.AwaitingPrompt;
+      controls.appendChild(p);
+    }
+    const reply = $("#reply");
+    if (reply) reply.className = "reply" + (r.State === "awaiting_input" ? " show" : "");
+  }
+
+  function streamEvents(runID, log) {
+    src = new EventSource("/api/runs/" + encodeURIComponent(runID) + "/stream");
+    let first = true;
+    src.onmessage = (ev) => {
+      if (first) { log.textContent = ""; first = false; }
+      let p;
+      try { p = JSON.parse(ev.data); } catch (_) { return; }
+      const span = document.createElement("span");
+      span.className = "ev";
+      let text = p.type;
+      const dd = p.data || {};
+      if (p.type === "tool_call_start" || p.type === "tool_call") {
+        span.classList.add("tool");
+        text = "› " + (dd.tool || "?") + (dd.turn ? " (turn " + dd.turn + ")" : "") +
+          (p.type === "tool_call" && dd.status ? " - " + dd.status : "");
+      } else if (p.type === "verbose") {
+        span.classList.add("verbose");
+        text = (dd.label ? dd.label + ": " : "") + (dd.msg || "");
+      } else if (p.type === "awaiting_input") {
+        span.classList.add("await");
+        text = "⏸ awaiting input: " + (dd.prompt || "");
+      } else if (p.type === "complete") {
+        span.classList.add("done");
+        text = "✓ complete in " + (dd.turns || "?") + " turns, $" + (dd.cost_usd || 0).toFixed(4);
+      } else if (p.type === "error") {
+        span.classList.add("err");
+        text = "✗ error: " + (dd.message || "?");
+      } else if (p.type === "start") {
+        text = "▶ " + (dd.question || "started");
+      }
+      span.textContent = text;
+      log.appendChild(span);
+      log.scrollTop = log.scrollHeight;
+      if (p.type === "complete" || p.type === "error") {
+        src.close();
+        setTimeout(load, 250);
+      }
+    };
+    src.onerror = () => {
+      if (first && src.readyState === EventSource.CLOSED) {
+        log.textContent = "stream closed before any events (job may have no event log yet).";
+      }
+      src.close();
+    };
+  }
+
+  // checkOk rejects non-2xx responses with the backend's {error} message so
+  // a 400 (e.g. "job is not awaiting input") can't flash a success toast - 
+  // fetch() only rejects on network failure, never on HTTP status.
+  async function checkOk(r) {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
+    return j;
+  }
+
+  function cancelRun(runID) {
+    fetch("/api/runs/" + encodeURIComponent(runID) + "/cancel", { method: "POST" })
+      .then(checkOk)
+      .then(() => { flash("ok", "Cancelled."); setTimeout(load, 200); })
+      .catch((e) => flash("err", "Cancel failed: " + e.message));
+  }
+
+  function sendInput(runID) {
+    const input = $("#replyText");
+    const text = (input.value || "").trim();
+    if (!text) return;
+    fetch("/api/runs/" + encodeURIComponent(runID) + "/input", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    })
+      .then(checkOk)
+      .then(() => { flash("ok", "Sent to agent."); input.value = ""; setTimeout(load, 200); })
+      .catch((e) => flash("err", "Send failed: " + e.message));
+  }
+
+  $("#refresh").onclick = load;
+  $("#stateFilter").onchange = load;
+  load();
+  setInterval(load, 2000); // match the daemon's job-watch cadence
+</script>
+</body>
+</html>

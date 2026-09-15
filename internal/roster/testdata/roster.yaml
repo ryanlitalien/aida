@@ -1,0 +1,36 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    call_sign: Aida
+    description: Chief of staff and front door.
+    profiles: []
+
+  butterstack-team:
+    kind: subagent
+    discover: testdata/agents
+    call_signs_from: testdata/org-chart.md
+    profiles: [work]
+    subagent:
+      dir: testdata/butterstack-stub
+
+  # Hand-authored override: same Name as the discovered "product-manager"
+  # persona above, used to pin aliases the frontmatter cannot express.
+  product-manager:
+    kind: subagent
+    call_sign: Pamela
+    aliases: [pam, pamela, "the product manager"]
+    description: Hand-authored override pinning aliases the frontmatter can't express.
+    profiles: [work]
+    subagent:
+      dir: testdata/butterstack-stub
+      agent: product-manager
+
+  workouts:
+    kind: subagent
+    call_sign: Coach
+    aliases: [coach, trainer]
+    description: Personal trainer and nutrition coach.
+    profiles: [home]
+    subagent:
+      dir: testdata/workouts-stub

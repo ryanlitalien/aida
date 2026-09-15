@@ -1,0 +1,15 @@
+# Worked example: a "docs" source with search.mode: grep. Plain type: docs
+# sources only read `context:` into the LLM; adding `search: {mode: grep}`
+# lets Aida full-text search every file under `path` instead (for a docs
+# tree too large to paste into context whole). Edit `path` to point at a
+# real notes/docs directory, or delete this file if you don't have one.
+path: ~/dev/wakanda-archives
+type: docs
+example: true
+description: Wakandan vibranium research notes and technology archives.
+capabilities: [reference-docs, research]
+entities: [wakanda, vibranium, black-panther]
+search:
+  mode: grep
+  include: ["*.md", "*.txt"]
+  exclude: ["classified/**/*.pdf"]

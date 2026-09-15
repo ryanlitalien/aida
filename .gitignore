@@ -1,0 +1,29 @@
+bin/
+dist/
+.env
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+.DS_Store
+# stray go-build outputs from `go build ./cmd/golden-log` etc.
+/golden-log
+
+# Generated harness output (scripts/run-goldens.sh, cmd/golden-log): personal
+# routing/answer logs, never re-committed.
+/golden.md
+/test-runs/
+
+# Claude Code: personal/machine-local overrides (settings.json is committed)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+# Each agent worktree is itself a git checkout under .claude/worktrees/<name>/
+# - runtime state managed by `git worktree add`, never the repo's concern.
+.claude/worktrees/
+
+# Downloaded reference PDFs kept locally for reading; not source-of-truth
+# and large enough to bloat the repo. Add specific ones to git explicitly
+# if/when they earn their place.
+*.pdf

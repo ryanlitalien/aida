@@ -1,0 +1,11 @@
+# Worked example: an "exec" tool source. `exec.query` MUST have a real
+# command prefix before `{query}` -- the library loader rejects a bare
+# `{query}` outright (it would shell-inject whatever the LLM writes). Swap
+# `shield-db` for a real CLI on your PATH, or delete this file if you don't
+# have a query tool to wire up.
+type: tool
+description: Query S.H.I.E.L.D.'s personnel database via its CLI.
+capabilities: [sql-query]
+entities: [shield, personnel]
+exec:
+  query: 'shield-db query "{query}"'

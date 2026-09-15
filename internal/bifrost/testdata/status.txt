@@ -1,0 +1,14 @@
+client:
+  version: 0.7.4
+  channel: stable
+  protocol: 16
+
+server:
+  status: running
+  version: 0.7.4
+  protocol: 16
+  compatible: yes
+  socket: /home/heimdall/.config/herdr/herdr.sock
+
+update:
+  restart_needed: no

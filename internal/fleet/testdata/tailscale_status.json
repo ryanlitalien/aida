@@ -1,0 +1,100 @@
+{
+  "Self": {
+    "HostName": "edith",
+    "DNSName": "edith.tail1a2b3c.ts.net.",
+    "TailscaleIPs": [
+      "100.64.0.1",
+      "fd7a:115c:a1e0::1"
+    ],
+    "Online": true,
+    "OS": "macOS",
+    "LastSeen": "0001-01-01T00:00:00Z",
+    "Active": false
+  },
+  "Peer": {
+    "nodekey:1111111111111111111111111111111111111111111111111111111111111111": {
+      "HostName": "Pixel 9 Pro",
+      "DNSName": "pixel-9-pro.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.2",
+        "fd7a:115c:a1e0::2"
+      ],
+      "Online": true,
+      "OS": "android",
+      "LastSeen": "2026-07-21T02:00:00.1Z",
+      "Active": false
+    },
+    "nodekey:2222222222222222222222222222222222222222222222222222222222222222": {
+      "HostName": "beast-wsl",
+      "DNSName": "beast-wsl.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.3",
+        "fd7a:115c:a1e0::3"
+      ],
+      "Online": false,
+      "OS": "linux",
+      "LastSeen": "2026-07-20T14:00:07.1Z",
+      "Active": false
+    },
+    "nodekey:3333333333333333333333333333333333333333333333333333333333333333": {
+      "HostName": "wanda",
+      "DNSName": "wanda.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.4",
+        "fd7a:115c:a1e0::4"
+      ],
+      "Online": true,
+      "OS": "windows",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "Active": false
+    },
+    "nodekey:4444444444444444444444444444444444444444444444444444444444444444": {
+      "HostName": "Beast",
+      "DNSName": "beast.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.5",
+        "fd7a:115c:a1e0::5"
+      ],
+      "Online": true,
+      "OS": "windows",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "Active": false
+    },
+    "nodekey:5555555555555555555555555555555555555555555555555555555555555555": {
+      "HostName": "photon",
+      "DNSName": "photon.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.6",
+        "fd7a:115c:a1e0::6"
+      ],
+      "Online": false,
+      "OS": "macOS",
+      "LastSeen": "2026-07-21T03:40:00.1Z",
+      "Active": false
+    },
+    "nodekey:6666666666666666666666666666666666666666666666666666666666666666": {
+      "HostName": "wanda-wsl",
+      "DNSName": "wanda-wsl.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.7",
+        "fd7a:115c:a1e0::7"
+      ],
+      "Online": true,
+      "OS": "linux",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "Active": false
+    },
+    "nodekey:7777777777777777777777777777777777777777777777777777777777777777": {
+      "HostName": "minty",
+      "DNSName": "minty.tail1a2b3c.ts.net.",
+      "TailscaleIPs": [
+        "100.64.0.8",
+        "fd7a:115c:a1e0::8"
+      ],
+      "Online": true,
+      "OS": "linux",
+      "LastSeen": "0001-01-01T00:00:00Z",
+      "Active": true
+    }
+  }
+}

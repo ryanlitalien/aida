@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jarvis TTS: before &amp; after — issue #120</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0:      #f6f5f2;
+  --surface-1:      #fcfcfb;
+  --surface-2:      #efeeea;
+  --border:         #dedcd5;
+  --border-strong:  #c6c4bb;
+  --text-primary:   #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted:     #7a7871;
+  --series-1:       #2a78d6;  /* multilingual_v2 — the incumbent */
+  --series-2:       #eb6834;  /* flash_v2_5 */
+  --series-3:       #1baf7a;  /* turbo_v2_5 */
+  --good:           #1a7f4b;
+  --good-bg:        #e4f4ea;
+  --warn-bg:        #fdf1de;
+  --warn-fg:        #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0:      #121211;
+    --surface-1:      #1a1a19;
+    --surface-2:      #232322;
+    --border:         #33332f;
+    --border-strong:  #4a4a45;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #8e8d84;
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --good:           #4ec98a;
+    --good-bg:        #17301f;
+    --warn-bg:        #2e2410;
+    --warn-fg:        #e0b45c;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0:      #121211;
+  --surface-1:      #1a1a19;
+  --surface-2:      #232322;
+  --border:         #33332f;
+  --border-strong:  #4a4a45;
+  --text-primary:   #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted:     #8e8d84;
+  --series-1:       #3987e5;
+  --series-2:       #d95926;
+  --series-3:       #199e70;
+  --good:           #4ec98a;
+  --good-bg:        #17301f;
+  --warn-bg:        #2e2410;
+  --warn-fg:        #e0b45c;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font: 15px/1.6 ui-sans-serif, -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 96px; }
+
+header { margin-bottom: 40px; }
+.eyebrow {
+  font: 600 11px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 12px;
+}
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -.02em; font-weight: 640; }
+.sub { color: var(--text-secondary); margin: 0; max-width: 68ch; }
+
+h2 {
+  font-size: 19px; margin: 0 0 6px; letter-spacing: -.01em; font-weight: 620;
+}
+.section { margin-top: 52px; }
+.section > .note { color: var(--text-secondary); margin: 0 0 22px; max-width: 72ch; font-size: 14px; }
+
+.theme-toggle {
+  position: fixed; top: 16px; right: 16px; z-index: 10;
+  background: var(--surface-1); color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 11px; font: 500 12px/1 inherit; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--border-strong); color: var(--text-primary); }
+
+/* ---------- verdict ---------- */
+.verdict {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 26px 28px;
+}
+.verdict-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.verdict-head h2 { margin: 0; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--good-bg); color: var(--good);
+  border-radius: 999px; padding: 4px 11px;
+  font: 600 11.5px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: .04em;
+}
+.verdict p { color: var(--text-secondary); margin: 0 0 22px; max-width: 72ch; font-size: 14px; }
+.verdict p:last-child { margin-bottom: 0; }
+.verdict code, .note code, td code, .caveats code {
+  font: 500 .89em ui-monospace, "SF Mono", Menlo, monospace;
+  background: var(--surface-2); border-radius: 4px; padding: 1.5px 5px;
+}
+
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.tile { background: var(--surface-1); padding: 18px 20px; }
+.tile .label { font: 600 10.5px/1 ui-monospace, Menlo, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+.tile .big { font-size: 27px; line-height: 1.05; letter-spacing: -.025em; font-weight: 640; font-variant-numeric: tabular-nums; }
+.tile .big .from { color: var(--text-muted); font-weight: 500; }
+.tile .big .arrow { color: var(--text-muted); font-weight: 400; margin: 0 5px; }
+.tile .delta { margin-top: 7px; font-size: 12.5px; color: var(--good); font-weight: 560; }
+.tile .delta.neutral { color: var(--text-secondary); font-weight: 500; }
+@media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } }
+
+/* ---------- charts ---------- */
+figure { margin: 0; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px 16px; }
+.figcap { color: var(--text-muted); font-size: 12.5px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.chart-scroll { overflow-x: auto; }
+.chart-scroll svg { display: block; min-width: 520px; width: 100%; height: auto; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend .item { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-secondary); }
+.legend .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+
+text { font-family: ui-sans-serif, -apple-system, "Helvetica Neue", sans-serif; }
+.tick-label { font-size: 11px; fill: var(--text-muted); }
+.row-label  { font-size: 13px; fill: var(--text-primary); font-weight: 540; }
+.row-sub    { font-size: 11px; fill: var(--text-muted); }
+.val-label  { font-size: 12px; font-weight: 640; font-variant-numeric: tabular-nums; }
+.axis-title { font-size: 11px; fill: var(--text-muted); }
+.gridline   { stroke: var(--border); stroke-width: 1; }
+.baseline   { stroke: var(--border-strong); stroke-width: 1; }
+
+.hit { fill: transparent; cursor: default; }
+.tip {
+  position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s;
+  background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  padding: 8px 11px; font-size: 12.5px; line-height: 1.45;
+  box-shadow: 0 4px 16px rgba(0,0,0,.16); z-index: 50; max-width: 260px;
+}
+.tip .tip-t { font-weight: 640; margin-bottom: 3px; }
+.tip .tip-r { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+/* ---------- audio ---------- */
+.audio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 760px) { .audio-grid { grid-template-columns: 1fr; } }
+.voice-col { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px 22px; }
+.voice-col h3 { margin: 0 0 3px; font-size: 16px; font-weight: 620; }
+.voice-col .vmeta { color: var(--text-muted); font-size: 12px; margin: 0 0 18px; font-family: ui-monospace, Menlo, monospace; }
+.clip { padding: 14px 0; border-top: 1px solid var(--border); }
+.clip:first-of-type { border-top: none; padding-top: 0; }
+.clip-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; flex-wrap: wrap; }
+.clip-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.clip-name { font: 600 12.5px/1 ui-monospace, Menlo, monospace; }
+.clip-tag { font-size: 10.5px; color: var(--text-muted); border: 1px solid var(--border-strong); border-radius: 999px; padding: 2px 7px; letter-spacing: .03em; }
+.clip audio { width: 100%; height: 34px; }
+.clip .cmeta { font-size: 11.5px; color: var(--text-muted); margin-top: 7px; font-variant-numeric: tabular-nums; }
+
+/* ---------- table ---------- */
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { text-align: right; padding: 9px 12px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
+thead th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; border-bottom-color: var(--border-strong); }
+tbody tr:last-child td { border-bottom: none; }
+tr.is-winner td { background: var(--good-bg); }
+tr.is-winner td:first-child { font-weight: 640; }
+.table-wrap { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 6px 10px; overflow-x: auto; }
+.namecell { display: inline-flex; align-items: center; gap: 8px; }
+.namecell .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+/* ---------- caveats ---------- */
+.caveats { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 8px 26px 20px; }
+.caveats li { color: var(--text-secondary); font-size: 13.5px; margin-top: 11px; }
+.caveats li strong { color: var(--text-primary); font-weight: 620; }
+.flag { background: var(--warn-bg); color: var(--warn-fg); border-radius: 999px; padding: 2px 8px; font: 600 10.5px/1.5 ui-monospace, Menlo, monospace; letter-spacing: .04em; }
+footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle">◐ theme</button>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">aida · issue #120 · measured 2026-07-21</div>
+  <h1>Cutting Jarvis's TTS latency without changing the voices</h1>
+  <p class="sub">
+    Live A/B against the ElevenLabs streaming endpoint from this machine, using both personas'
+    real production <code>voice_settings</code>. Time-to-first-audio is what the user hears as dead air,
+    so TTFB is the metric throughout &mdash; not total synthesis time.
+  </p>
+</header>
+
+<section class="verdict">
+  <div class="verdict-head">
+    <h2>Recommendation: <code>eleven_turbo_v2_5</code></h2>
+    <span class="pill">FASTER · HALF PRICE · SAME VOICE ID</span>
+  </div>
+  <p>
+    This reverses the earlier call on the issue, which favoured Flash on ElevenLabs' published guidance
+    that Flash beats Turbo &ldquo;in all use cases.&rdquo; On <em>this</em> network path the opposite holds: Turbo is
+    faster on average (309ms vs 379ms) and dramatically steadier &mdash; a 31ms standard deviation against
+    Flash's 162ms. Flash spiked to 596ms in 1 of 5 runs; Turbo's worst run was 337ms. Dead air is judged
+    by its worst moments, not its average, so the tighter distribution is the stronger argument.
+  </p>
+  <div class="tiles">
+    <div class="tile">
+      <div class="label">Time to first audio</div>
+      <div class="big"><span class="from">827</span><span class="arrow">→</span>309<span style="font-size:15px;font-weight:520"> ms</span></div>
+      <div class="delta">518ms faster · 63% cut</div>
+    </div>
+    <div class="tile">
+      <div class="label">Credit cost</div>
+      <div class="big"><span class="from">1.0</span><span class="arrow">→</span>0.5<span style="font-size:15px;font-weight:520"> /char</span></div>
+      <div class="delta">50% cheaper · $0.10→$0.05 per 1k</div>
+    </div>
+    <div class="tile">
+      <div class="label">Voice identity</div>
+      <div class="big">unchanged</div>
+      <div class="delta neutral">same voice IDs · verify by ear below</div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Where the time goes, per option</h2>
+  <p class="note">
+    Five requests per option, same 49-character reply (<em>&ldquo;The nine o'clock meeting has moved to eight, sir.&rdquo;</em>),
+    Jarvis's voice and settings. Each dot is one real request; the bar is the mean. The spread matters as much
+    as the position &mdash; that is the whole case against Flash.
+  </p>
+  <figure>
+    <div class="legend" id="legend1"></div>
+    <div class="chart-scroll"><svg id="chart1" role="img" aria-label="Time-to-first-audio by model, five requests each"></svg></div>
+    <figcaption class="figcap">
+      Lower is better. Horizontal line spans min&ndash;max across the 5 runs. Hollow marks are a
+      parameter variant of the model above them, not a separate model:
+      <code>osl=3</code> is the <code>optimize_streaming_latency</code> query parameter, which production
+      does <em>not</em> send today.
+    </figcaption>
+  </figure>
+</section>
+
+<section class="section">
+  <h2>The finding that changes the payoff</h2>
+  <p class="note">
+    The current model's time-to-first-audio <em>scales with reply length</em>; Flash and Turbo stay flat.
+    A short reply costs it ~830ms, but a paragraph costs it two full seconds. Longer answers &mdash;
+    briefings, <code>aida_query</code> results &mdash; are exactly where the delay is worst today, and exactly where
+    the switch pays most.
+  </p>
+  <figure>
+    <div class="legend" id="legend2"></div>
+    <div class="chart-scroll"><svg id="chart2" role="img" aria-label="Time-to-first-audio versus reply length, by model"></svg></div>
+    <figcaption class="figcap">
+      567-character figures are the mean of the Jarvis and Aida runs; 49-character figures are Jarvis only (n=5).
+    </figcaption>
+  </figure>
+</section>
+
+<section class="section">
+  <h2>Does it still sound like them?</h2>
+  <p class="note">
+    The one question no measurement settles. The voice ID is unchanged in every clip &mdash; the model is the
+    synthesis engine, not the voice asset &mdash; so the risk is not a <em>different</em> voice but a flatter one.
+    ElevenLabs concedes emotional nuance is Flash and Turbo's weak point, and Aida's persona deliberately
+    rides on it (stability 0.40, style 0.40, tuned for wit and sarcasm). <strong>Listen to Aida's three clips
+    back to back;</strong> that pair is the actual decision. Jarvis, at stability 1.0 and style 0.05, has almost
+    nothing to lose.
+  </p>
+  <div class="audio-grid" id="audioGrid"></div>
+</section>
+
+<section class="section">
+  <h2>Full results</h2>
+  <p class="note">Every number on this page, including the runs the charts summarise.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th><th>Mean</th><th>Median</th><th>Best</th><th>Worst</th>
+          <th>Std dev</th><th>Long reply</th><th>Cost/char</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Caveats worth keeping</h2>
+  <ul class="caveats">
+    <li>
+      <span class="flag">N=5</span> Five samples per option. Enough to separate 827ms from 309ms with
+      confidence, and enough to expose Flash's variance, but <strong>not</strong> enough to call Turbo's 309ms
+      meaningfully different from Flash-with-<code>osl</code>'s 316ms. Those two are a tie on this evidence.
+    </li>
+    <li>
+      <span class="flag">NETWORK</span> Measured from one machine on one connection in a single session.
+      Roughly 375ms of any TTFB here is TCP/TLS setup that no model choice removes &mdash; which is also why
+      the floor sits near 250ms rather than the ~75ms vendor inference figure.
+    </li>
+    <li>
+      <span class="flag">UNTESTED</span> <code>eleven_v3</code> was deliberately excluded: it bills at the same
+      1 credit/char as today and ElevenLabs states it is not built for real-time use, so it cannot win on
+      either axis. Not tested, not ruled out on quality grounds &mdash; ruled out on cost and latency.
+    </li>
+    <li>
+      <span class="flag">SCOPE</span> <code>output_format</code> was left at the default. Dropping to a lower
+      bitrate would shave more off TTFB but trades audio quality, which cuts against keeping the voices intact.
+    </li>
+  </ul>
+</section>
+
+<footer>
+  Generated 2026-07-21 · 26 live requests · 1,436 characters of ElevenLabs quota spent ·
+  raw data in <code>latency.csv</code> and <code>clips.csv</code>, audio in <code>clips/</code>
+</footer>
+
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const S1 = 'var(--series-1)', S2 = 'var(--series-2)', S3 = 'var(--series-3)';
+
+const OPTIONS = [
+  { key:'mult',  name:'eleven_multilingual_v2', tag:'current', color:S1,
+    reps:[808,856,801,793,877], long:2020, cost:1.0 },
+  { key:'flash', name:'eleven_flash_v2_5',      tag:'',        color:S2,
+    reps:[505,300,261,233,596], long:416,  cost:0.5 },
+  { key:'turbo', name:'eleven_turbo_v2_5',      tag:'winner',  color:S3,
+    reps:[268,336,320,285,337], long:432,  cost:0.5 },
+  { key:'osl',   name:'eleven_flash_v2_5 + osl=3', tag:'',     color:S2,
+    reps:[321,491,247,225,297], long:null, cost:0.5, variant:true },
+];
+
+const stats = a => {
+  const v = [...a].sort((x,y)=>x-y), n = v.length;
+  const mean = v.reduce((s,x)=>s+x,0)/n;
+  const med = n%2 ? v[(n-1)/2] : (v[n/2-1]+v[n/2])/2;
+  const sd = Math.sqrt(v.reduce((s,x)=>s+(x-mean)**2,0)/(n-1));
+  return { mean, med, min:v[0], max:v[n-1], sd };
+};
+OPTIONS.forEach(o => Object.assign(o, stats(o.reps)));
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const el = (t, a={}) => { const e = document.createElementNS(SVGNS,t); for (const k in a) e.setAttribute(k,a[k]); return e; };
+
+/* ---------- tooltip ---------- */
+const tip = document.getElementById('tip');
+function showTip(evt, title, rows) {
+  tip.innerHTML = '<div class="tip-t">'+title+'</div>' + rows.map(r=>'<div class="tip-r">'+r+'</div>').join('');
+  tip.style.opacity = '1';
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX + pad, y = evt.clientY - h - pad;
+  if (x + w > innerWidth - 8) x = evt.clientX - w - pad;
+  if (y < 8) y = evt.clientY + pad;
+  tip.style.left = x+'px'; tip.style.top = y+'px';
+}
+const hideTip = () => tip.style.opacity = '0';
+
+/* ---------- chart 1: dot plot ---------- */
+(function () {
+  const W = 860, ML = 224, MR = 76, MT = 14, ROW = 62, MB = 46;
+  const H = MT + OPTIONS.length*ROW + MB;
+  const xMax = 950, px = v => ML + (v/xMax) * (W-ML-MR);
+  const svg = document.getElementById('chart1');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  for (let t = 0; t <= xMax; t += 200) {
+    svg.appendChild(el('line', { class:'gridline', x1:px(t), x2:px(t), y1:MT, y2:MT+OPTIONS.length*ROW }));
+    const lab = el('text', { class:'tick-label', x:px(t), y:MT+OPTIONS.length*ROW+18, 'text-anchor':'middle' });
+    lab.textContent = t; svg.appendChild(lab);
+  }
+  const at = el('text', { class:'axis-title', x:px(0), y:MT+OPTIONS.length*ROW+36, 'text-anchor':'start' });
+  at.textContent = 'time to first audio (ms) — lower is better'; svg.appendChild(at);
+  svg.appendChild(el('line', { class:'baseline', x1:ML, x2:ML, y1:MT, y2:MT+OPTIONS.length*ROW }));
+
+  OPTIONS.forEach((o, i) => {
+    const cy = MT + i*ROW + ROW/2;
+
+    const n = el('text', { class:'row-label', x:ML-14, y:cy-3, 'text-anchor':'end' });
+    n.textContent = o.name.replace('eleven_','').replace(' + osl=3',' +osl');
+    svg.appendChild(n);
+    const s = el('text', { class:'row-sub', x:ML-14, y:cy+13, 'text-anchor':'end' });
+    s.textContent = o.tag === 'current' ? 'today · 1 credit/char'
+                  : o.tag === 'winner'  ? 'recommended · 0.5 credit/char'
+                  : '0.5 credit/char';
+    svg.appendChild(s);
+
+    // min–max range
+    svg.appendChild(el('line', {
+      x1:px(o.min), x2:px(o.max), y1:cy, y2:cy,
+      stroke:o.color, 'stroke-width':2, 'stroke-linecap':'round', opacity:.3 }));
+
+    // individual runs — hollow for a parameter variant of the model above it,
+    // so the two orange rows are never distinguished by colour alone
+    o.reps.forEach((v, j) => {
+      svg.appendChild(el('circle', { cx:px(v), cy, r:5.5, fill:'var(--surface-1)' }));
+      const c = o.variant
+        ? el('circle', { cx:px(v), cy, r:3.6, fill:'var(--surface-1)', stroke:o.color, 'stroke-width':2, opacity:.85 })
+        : el('circle', { cx:px(v), cy, r:4, fill:o.color, opacity:.62 });
+      svg.appendChild(c);
+      const hit = el('circle', { class:'hit', cx:px(v), cy, r:13 });
+      hit.addEventListener('mousemove', e => showTip(e, o.name, ['run '+(j+1)+' of 5', '<b>'+v+' ms</b> to first audio']));
+      hit.addEventListener('mouseleave', hideTip);
+      svg.appendChild(hit);
+    });
+
+    // mean
+    svg.appendChild(el('rect', {
+      x:px(o.mean)-1.5, y:cy-15, width:3, height:30, rx:1.5, fill:o.color }));
+    const ml = el('text', { class:'val-label', x:px(o.max)+13, y:cy+4, fill:o.color });
+    ml.textContent = Math.round(o.mean) + ' ms';
+    svg.appendChild(ml);
+
+    const rowHit = el('rect', { class:'hit', x:ML, y:cy-ROW/2, width:W-ML-MR+60, height:ROW });
+    rowHit.addEventListener('mousemove', e => showTip(e, o.name, [
+      'mean <b>'+Math.round(o.mean)+' ms</b>', 'median '+Math.round(o.med)+' ms',
+      'range '+o.min+'–'+o.max+' ms', 'std dev '+Math.round(o.sd)+' ms']));
+    rowHit.addEventListener('mouseleave', hideTip);
+    svg.insertBefore(rowHit, svg.firstChild);
+  });
+})();
+
+/* ---------- chart 2: slope ---------- */
+(function () {
+  const W = 860, ML = 62, MR = 168, MT = 22, MB = 52, H = 320;
+  const lines = OPTIONS.filter(o => o.long !== null);
+  const yMax = 2200, py = v => MT + (1 - v/yMax) * (H-MT-MB);
+  const xs = [ML + 40, W - MR];
+  const svg = document.getElementById('chart2');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  for (let t = 0; t <= yMax; t += 500) {
+    svg.appendChild(el('line', { class:'gridline', x1:ML, x2:W-MR+30, y1:py(t), y2:py(t) }));
+    const lab = el('text', { class:'tick-label', x:ML-12, y:py(t)+4, 'text-anchor':'end' });
+    lab.textContent = t; svg.appendChild(lab);
+  }
+  const yt = el('text', { class:'axis-title', x:ML-12, y:py(yMax)-8, 'text-anchor':'end' });
+  yt.textContent = 'ms'; svg.appendChild(yt);
+
+  [['49 chars','short reply'], ['567 chars','paragraph reply']].forEach(([a,b], i) => {
+    const t1 = el('text', { class:'row-label', x:xs[i], y:H-MB+26, 'text-anchor':'middle' });
+    t1.textContent = a; svg.appendChild(t1);
+    const t2 = el('text', { class:'row-sub', x:xs[i], y:H-MB+42, 'text-anchor':'middle' });
+    t2.textContent = b; svg.appendChild(t2);
+  });
+
+  lines.forEach(o => {
+    const pts = [[xs[0], py(o.mean)], [xs[1], py(o.long)]];
+    svg.appendChild(el('line', {
+      x1:pts[0][0], y1:pts[0][1], x2:pts[1][0], y2:pts[1][1],
+      stroke:o.color, 'stroke-width':2, 'stroke-linecap':'round' }));
+
+    pts.forEach(([cx, cy], j) => {
+      svg.appendChild(el('circle', { cx, cy, r:6.5, fill:'var(--surface-1)' }));
+      svg.appendChild(el('circle', { cx, cy, r:4.5, fill:o.color }));
+      const v = j === 0 ? Math.round(o.mean) : o.long;
+      const hit = el('circle', { class:'hit', cx, cy, r:16 });
+      hit.addEventListener('mousemove', e => showTip(e, o.name, [
+        (j===0?'49-character reply':'567-character reply'), '<b>'+v+' ms</b> to first audio']));
+      hit.addEventListener('mouseleave', hideTip);
+      svg.appendChild(hit);
+    });
+
+  });
+
+  // Direct labels, dodged apart. At this scale flash and turbo land ~2px apart
+  // on the right (416 vs 432ms) and ~8px on the left (379 vs 309ms), so both
+  // ends would overprint. Anything closer than its GAP is pushed apart and
+  // given a leader line back to the true position.
+  const dodge = (items, gap) => {
+    const s = items.map(it => ({ ...it, y: it.want })).sort((a, b) => a.want - b.want);
+    for (let i = 1; i < s.length; i++) {
+      if (s[i].y - s[i-1].y < gap) s[i].y = s[i-1].y + gap;
+    }
+    return s;
+  };
+
+  // right end: value + model name stacked, so it needs the taller gap
+  dodge(lines.map(o => ({ o, want: py(o.long) })), 34).forEach(({ o, y, want }) => {
+    if (Math.abs(y - want) > 1) {
+      svg.appendChild(el('path', {
+        d:`M ${xs[1]+7} ${want} L ${xs[1]+12} ${y-4}`,
+        stroke:o.color, 'stroke-width':1.5, fill:'none', opacity:.45 }));
+    }
+    const nm = el('text', { class:'val-label', x:xs[1]+16, y:y-2, fill:o.color });
+    nm.textContent = o.long + ' ms';
+    svg.appendChild(nm);
+    const sub = el('text', { class:'row-sub', x:xs[1]+16, y:y+13 });
+    sub.textContent = o.name.replace('eleven_','');
+    svg.appendChild(sub);
+  });
+
+  // left end: bare value, so a tighter gap suffices
+  dodge(lines.map(o => ({ o, want: py(o.mean) })), 15).forEach(({ o, y, want }) => {
+    if (Math.abs(y - want) > 1) {
+      svg.appendChild(el('path', {
+        d:`M ${xs[0]-7} ${want} L ${xs[0]-12} ${y-4}`,
+        stroke:o.color, 'stroke-width':1.5, fill:'none', opacity:.45 }));
+    }
+    const lv = el('text', { class:'val-label', x:xs[0]-16, y:y+4, fill:o.color, 'text-anchor':'end' });
+    lv.textContent = Math.round(o.mean);
+    svg.appendChild(lv);
+  });
+})();
+
+/* ---------- legends ---------- */
+function legend(id, opts) {
+  document.getElementById(id).innerHTML = opts.map(o => {
+    const sw = o.variant
+      ? `box-shadow: inset 0 0 0 2px ${o.color}; background: var(--surface-1)`
+      : `background:${o.color}`;
+    return `<span class="item"><span class="swatch" style="${sw}"></span>${o.name}${o.tag==='current'?' (today)':''}</span>`;
+  }).join('');
+}
+legend('legend1', OPTIONS);
+legend('legend2', OPTIONS.filter(o => o.long !== null));
+
+/* ---------- audio ---------- */
+const VOICES = [
+  { key:'jarvis', name:'Jarvis', meta:'stability 1.0 · style 0.05 · speed 0.85 · voice mfGn240ErL2HMopgBro1',
+    durations:{ mult:'37.6s', flash:'37.6s', turbo:'38.0s' },
+    ttfb:{ mult:2030, flash:401, turbo:402 } },
+  { key:'aida', name:'Aida', meta:'stability 0.40 · style 0.40 · speed 1.0 · voice Lopz0RdZlxPXALj2qGr3',
+    durations:{ mult:'34.0s', flash:'32.4s', turbo:'32.6s' },
+    ttfb:{ mult:2010, flash:430, turbo:461 } },
+];
+const CLIP_MODELS = [
+  { key:'mult',  file:'eleven_multilingual_v2', label:'multilingual_v2', tag:'current', color:S1 },
+  { key:'flash', file:'eleven_flash_v2_5',      label:'flash_v2_5',      tag:'',        color:S2 },
+  { key:'turbo', file:'eleven_turbo_v2_5',      label:'turbo_v2_5',      tag:'recommended', color:S3 },
+];
+document.getElementById('audioGrid').innerHTML = VOICES.map(v => `
+  <div class="voice-col">
+    <h3>${v.name}</h3>
+    <p class="vmeta">${v.meta}</p>
+    ${CLIP_MODELS.map(m => `
+      <div class="clip">
+        <div class="clip-head">
+          <span class="clip-dot" style="background:${m.color}"></span>
+          <span class="clip-name">${m.label}</span>
+          ${m.tag ? `<span class="clip-tag">${m.tag}</span>` : ''}
+        </div>
+        <audio controls preload="none" src="clips/${v.key}-${m.file}.mp3"></audio>
+        <div class="cmeta">${v.ttfb[m.key]} ms to first audio · ${v.durations[m.key]} long</div>
+      </div>`).join('')}
+  </div>`).join('');
+
+/* ---------- table ---------- */
+document.getElementById('tbody').innerHTML = OPTIONS.map(o => `
+  <tr class="${o.tag==='winner'?'is-winner':''}">
+    <td><span class="namecell"><span class="swatch" style="background:${o.color}"></span>
+      ${o.name.replace('eleven_','')}${o.tag==='current'?' <span class="clip-tag">current</span>':''}</span></td>
+    <td>${Math.round(o.mean)} ms</td>
+    <td>${Math.round(o.med)} ms</td>
+    <td>${o.min} ms</td>
+    <td>${o.max} ms</td>
+    <td>${Math.round(o.sd)} ms</td>
+    <td>${o.long !== null ? o.long+' ms' : '—'}</td>
+    <td>${o.cost.toFixed(1)}</td>
+  </tr>`).join('');
+
+/* ---------- theme ---------- */
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const dark = cur ? cur === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aida bifrost</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --row-alt: #fafbfc;
+    --row-hover: #f0f4f8;
+    --sel: #e0ecff;
+    --border: #d8dee4;
+    --border-soft: #eaeef2;
+    --accent: #2b6cb0;
+    --chip-bg: #eef2f6;
+    --chip-fg: #334155;
+    --banner-err-bg: #fef2f2; --banner-err-fg: #b91c1c; --banner-err-border: #fecaca;
+    --banner-warn-bg: #fffbeb; --banner-warn-fg: #92400e; --banner-warn-border: #fde68a;
+    --st-done-fg: #15803d;
+
+    /* agent_status - "blocked" must be the loudest thing on the page */
+    --agent-blocked-bg: #fee2e2;  --agent-blocked-fg: #b91c1c;  --agent-blocked-border: #ef4444;
+    --agent-working-bg: #dbeafe;  --agent-working-fg: #1d4ed8;
+    --agent-idle-bg: #e5e7eb;     --agent-idle-fg: #4b5563;
+    --agent-unknown-bg: #eef2f6;  --agent-unknown-fg: #6b7280;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #e6edf3;
+      --muted: #8b949e;
+      --bg: #0d1117;
+      --card: #161b22;
+      --row-alt: #1c2128;
+      --row-hover: #21262d;
+      --sel: #123152;
+      --border: #30363d;
+      --border-soft: #21262d;
+      --accent: #58a6ff;
+      --chip-bg: #21262d;
+      --chip-fg: #c9d1d9;
+      --banner-err-bg: #3d1418;  --banner-err-fg: #ff7b72;  --banner-err-border: #5c2226;
+      --banner-warn-bg: #3a2e0a; --banner-warn-fg: #e3b341; --banner-warn-border: #5c4813;
+      --st-done-fg: #56d364;
+
+      --agent-blocked-bg: #3d1418;  --agent-blocked-fg: #ff7b72;  --agent-blocked-border: #f85149;
+      --agent-working-bg: #123152;  --agent-working-fg: #79c0ff;
+      --agent-idle-bg: #30363d;     --agent-idle-fg: #8b949e;
+      --agent-unknown-bg: #21262d;  --agent-unknown-fg: #8b949e;
+    }
+    .pill.up   { background: #12261d; color: #56d364; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 13.5px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: var(--fg); background: var(--bg); margin: 0;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  header nav a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  header nav a.active { color: var(--fg); cursor: default; }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  main { padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 1100px; margin: 0 auto; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .panel-head h2 { font-size: 14px; margin: 0; font-weight: 650; }
+  .panel-head .spacer { flex: 1; }
+
+  select, button, input, textarea {
+    font: inherit; color: var(--fg); background: var(--card);
+    border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
+  }
+  button { cursor: pointer; }
+  button:hover { background: var(--row-hover); }
+  button:disabled { cursor: wait; opacity: 0.6; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:disabled { background: var(--accent); }
+
+  .banner {
+    padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 12.5px;
+    border: 1px solid transparent;
+  }
+  .banner.err { background: var(--banner-err-bg); color: var(--banner-err-fg); border-color: var(--banner-err-border); }
+  .banner.warn { background: var(--banner-warn-bg); color: var(--banner-warn-fg); border-color: var(--banner-warn-border); }
+  .banner .hint { font-size: 11.5px; opacity: 0.85; margin-top: 2px; }
+  .ok-msg { color: var(--st-done-fg); font-size: 12.5px; margin-top: 6px; }
+
+  .chip {
+    display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+    background: var(--chip-bg); color: var(--chip-fg); font-size: 11px; font-weight: 600;
+  }
+
+  /* ---- Status ---- */
+  .status-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill.up   { background: #dcfce7; color: #15803d; }
+  .pill.down { background: var(--agent-blocked-bg); color: var(--agent-blocked-fg); }
+
+  /* ---- Agents ---- */
+  .agent-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;
+  }
+  .agent-card {
+    border: 1px solid var(--border-soft); border-radius: 6px; padding: 10px 12px;
+    background: var(--row-alt); display: flex; flex-direction: column; gap: 5px;
+    cursor: pointer; text-align: left;
+  }
+  .agent-card:hover { background: var(--row-hover); }
+  .agent-card.sel { background: var(--sel); border-color: var(--accent); }
+  .agent-card.status-blocked { border-color: var(--agent-blocked-border); box-shadow: 0 0 0 1px var(--agent-blocked-border); }
+  .agent-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .agent-name { font-weight: 650; }
+  .agent-cwd { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .agent-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .agent-pill {
+    display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .agent-pill.blocked { background: var(--agent-blocked-bg); color: var(--agent-blocked-fg); animation: blocked-pulse 1.2s ease-in-out infinite; }
+  .agent-pill.working { background: var(--agent-working-bg); color: var(--agent-working-fg); }
+  .agent-pill.idle    { background: var(--agent-idle-bg);    color: var(--agent-idle-fg); }
+  .agent-pill.unknown { background: var(--agent-unknown-bg); color: var(--agent-unknown-fg); }
+  .lane-pill { background: var(--chip-bg); color: var(--chip-fg); }
+  @keyframes blocked-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+  }
+
+  /* ---- Pane ---- */
+  .pane-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pane-controls label { display: flex; align-items: center; gap: 5px; }
+  .pane-controls input[type="number"] { width: 80px; }
+  .pane-pre {
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #0d1117; color: #c9d1d9; border-radius: 8px; padding: 12px;
+    white-space: pre-wrap; word-break: break-word; min-height: 160px; max-height: 480px;
+    overflow-y: auto; margin: 0;
+  }
+
+  /* ---- Send box ---- */
+  .send-box { display: flex; flex-direction: column; gap: 8px; }
+  .send-box textarea { width: 100%; min-height: 70px; resize: vertical; font-family: inherit; }
+  .send-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .send-row label { display: flex; align-items: center; gap: 5px; }
+
+  /* ---- Start session ---- */
+  .start-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .empty { color: var(--muted); padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aida bifrost</h1>
+  <nav>
+    <a href="/">Jarvis</a> &middot;
+    <a href="/tasks">Tasks</a> &middot;
+    <a href="/runs">Runs</a> &middot;
+    <a href="/dashboard">Dashboard</a> &middot;
+    <a class="active">Bifrost</a> &middot;
+    <a href="/menu">Menu</a> &middot;
+    <a href="/habits">Habits</a>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<script type="module">
+import { reactive, html, nextTick } from '/static/arrow/index.mjs';
+
+const state = reactive({
+  status: null,
+  statusErr: '',
+  agents: null,
+  agentsErr: '',
+  selected: '',
+  selectedLane: '',
+  pane: { text: '', err: '', loading: false },
+  paneSource: 'recent',
+  paneLines: 200,
+  sendText: '',
+  sendEnter: true,
+  sendBusy: false,
+  sendResult: '',
+  sendErr: '',
+  presets: null,
+  presetsErr: '',
+  selectedPreset: '',
+  startBusy: false,
+  startOk: '',
+  startErr: '',
+});
+
+// ---- data loading ----
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/bifrost/status');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.status = await r.json();
+    state.statusErr = '';
+  } catch (e) {
+    state.statusErr = 'Failed to load herdr status: ' + e.message;
+  }
+}
+
+async function loadAgents() {
+  try {
+    const r = await fetch('/api/bifrost/agents');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.agents = await r.json();
+    state.agentsErr = '';
+  } catch (e) {
+    state.agentsErr = 'Failed to load agents: ' + e.message;
+  }
+}
+
+async function loadPane() {
+  if (!state.selected) return;
+  state.pane.loading = true;
+  try {
+    const url = '/api/bifrost/agents/' + encodeURIComponent(state.selected) +
+      '/read?source=' + encodeURIComponent(state.paneSource) +
+      '&lines=' + encodeURIComponent(state.paneLines) +
+      '&lane=' + encodeURIComponent(state.selectedLane || '');
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (data.error) {
+      state.pane.err = data.error;
+    } else {
+      state.pane.text = data.text || '';
+      state.pane.err = '';
+      nextTick(() => {
+        const el = document.getElementById('pane-pre');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+  } catch (e) {
+    state.pane.err = 'Failed to read pane: ' + e.message;
+  } finally {
+    state.pane.loading = false;
+  }
+}
+
+async function loadPresets() {
+  try {
+    const r = await fetch('/api/bifrost/presets');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    state.presets = data.presets || [];
+    state.presetsErr = '';
+    if (state.presets.length && !state.selectedPreset) {
+      state.selectedPreset = state.presets[0].name;
+    }
+  } catch (e) {
+    state.presetsErr = 'Failed to load presets: ' + e.message;
+  }
+}
+
+function selectAgent(name, lane) {
+  if (state.selected === name) return;
+  state.selected = name;
+  state.selectedLane = lane || '';
+  state.pane.text = '';
+  state.pane.err = '';
+  loadPane();
+}
+
+async function sendMessage() {
+  if (!state.selected || state.sendBusy) return;
+  const text = state.sendText;
+  if (!text.trim()) return;
+  state.sendBusy = true;
+  state.sendResult = '';
+  state.sendErr = '';
+  try {
+    const r = await fetch('/api/bifrost/agents/' + encodeURIComponent(state.selected) + '/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, enter: state.sendEnter, lane: state.selectedLane }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (data.error) {
+      state.sendErr = data.error;
+    } else {
+      state.sendResult = 'Sent ' + (data.bytes || 0) + ' bytes in ' + (data.took_ms || 0) + 'ms.';
+      state.sendText = '';
+      loadPane();
+    }
+  } catch (e) {
+    state.sendErr = 'Send failed: ' + e.message;
+  } finally {
+    state.sendBusy = false;
+  }
+}
+
+async function startSession() {
+  if (!state.selectedPreset || state.startBusy) return;
+  const preset = (state.presets || []).find(p => p.name === state.selectedPreset);
+  state.startBusy = true;
+  state.startOk = '';
+  state.startErr = '';
+  try {
+    const r = await fetch('/api/bifrost/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preset: state.selectedPreset, lane: preset ? preset.user : '' }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (data.error) {
+      state.startErr = data.error;
+    } else {
+      state.startOk = 'Session started.';
+      loadAgents();
+    }
+  } catch (e) {
+    state.startErr = 'Start failed: ' + e.message;
+  } finally {
+    state.startBusy = false;
+  }
+}
+
+// ---- Status section ----
+
+function statusSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Herdr</h2>
+        <span class="spacer"></span>
+        <button @click="${() => { loadStatus(); loadAgents(); }}">Refresh</button>
+      </div>
+      ${() => state.statusErr ? html`<div class="banner err">${state.statusErr}</div>` : ''}
+      ${() => {
+        if (!state.status) return state.statusErr ? '' : html`<div class="empty">Loading…</div>`;
+        const s = state.status;
+        const pillClass = s.running ? 'pill up' : 'pill down';
+        return html`
+          <div class="status-line">
+            <span class="${pillClass}">${s.running ? 'running' : 'stopped'}</span>
+            ${s.version ? html`<span class="muted">v${s.version}</span>` : ''}
+            ${s.socket ? html`<span class="muted mono">${s.socket}</span>` : ''}
+          </div>
+          ${s.error ? html`
+            <div class="banner err">
+              <div>${s.error}</div>
+              <div class="hint">herdr is unreachable from this page. <code>aida-agent bifrost</code> still works from a terminal.</div>
+            </div>
+          ` : ''}
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- Agents section ----
+
+function agentPillClass(status) {
+  if (status === 'blocked') return 'agent-pill blocked';
+  if (status === 'working') return 'agent-pill working';
+  if (status === 'idle') return 'agent-pill idle';
+  return 'agent-pill unknown';
+}
+
+function agentCard(a) {
+  const isSel = a.name === state.selected;
+  const cardClass = 'agent-card' + (isSel ? ' sel' : '') + (a.agent_status === 'blocked' ? ' status-blocked' : '');
+  return html`
+    <div class="${cardClass}" @click="${() => selectAgent(a.name, a.lane)}">
+      <div class="agent-top">
+        <span class="agent-name">${a.name}</span>
+        <span class="${agentPillClass(a.agent_status)}">${a.agent_status || 'unknown'}</span>
+      </div>
+      ${a.lane ? html`<div><span class="chip lane-pill">${a.lane}</span></div>` : ''}
+      <div class="agent-cwd mono muted">${a.cwd || ''}</div>
+      <div class="agent-title muted">${a.terminal_title_stripped || ''}</div>
+    </div>
+  `.key(a.terminal_id || a.pane_id || a.name);
+}
+
+function agentsSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Agents</h2></div>
+      ${() => state.agentsErr ? html`<div class="banner err">${state.agentsErr}</div>` : ''}
+      ${() => (state.agents && state.agents.error) ? html`<div class="banner err">${state.agents.error}</div>` : ''}
+      ${() => (state.agents && !state.agents.herdr_ok && !state.agents.error)
+        ? html`<div class="banner warn">herdr is not reachable right now.</div>`
+        : ''}
+      <div class="agent-grid">
+        ${() => {
+          if (!state.agents) return state.agentsErr ? '' : html`<div class="empty">Loading…</div>`;
+          const list = state.agents.agents || [];
+          if (!list.length) return html`<div class="empty">No agents.</div>`;
+          return list.map(a => agentCard(a));
+        }}
+      </div>
+    </section>
+  `;
+}
+
+// ---- Pane section ----
+
+function paneSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Pane</h2></div>
+      ${() => {
+        if (!state.selected) return html`<div class="empty">Select an agent above to view its pane.</div>`;
+        return html`
+          <div class="pane-controls">
+            <span class="mono">${state.selected}</span>
+            <label class="muted">Source
+              <select value="${state.paneSource}" @change="${(e) => { state.paneSource = e.target.value; loadPane(); }}">
+                <option value="visible">visible</option>
+                <option value="recent">recent</option>
+                <option value="recent-unwrapped">recent-unwrapped</option>
+              </select>
+            </label>
+            <label class="muted">Lines
+              <input type="number" min="10" max="2000" step="10" value="${state.paneLines}"
+                @change="${(e) => { state.paneLines = parseInt(e.target.value, 10) || 200; loadPane(); }}" />
+            </label>
+            <button @click="${loadPane}" disabled="${state.pane.loading}">${state.pane.loading ? 'Loading…' : 'Reload'}</button>
+          </div>
+          ${state.pane.err ? html`<div class="banner err">${state.pane.err}</div>` : ''}
+          <pre id="pane-pre" class="pane-pre">${state.pane.text || '(no output yet)'}</pre>
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- Send box ----
+
+function sendSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Send</h2></div>
+      ${() => {
+        if (!state.selected) return html`<div class="empty">Select an agent to send it input.</div>`;
+        return html`
+          <div class="send-box">
+            <textarea
+              placeholder="${'Text to send to ' + state.selected + '… (Cmd/Ctrl+Enter to send)'}"
+              value="${state.sendText}"
+              @input="${(e) => { state.sendText = e.target.value; }}"
+              @keydown="${(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendMessage(); } }}"
+              disabled="${state.sendBusy}"
+            ></textarea>
+            <div class="send-row">
+              <label><input type="checkbox" checked="${state.sendEnter}" @change="${(e) => { state.sendEnter = e.target.checked; }}" /> append Enter</label>
+              <button class="primary" @click="${sendMessage}" disabled="${state.sendBusy || !state.sendText.trim()}">${state.sendBusy ? 'Sending…' : 'Send'}</button>
+              ${state.sendResult ? html`<span class="ok-msg">${state.sendResult}</span>` : ''}
+              ${state.sendErr ? html`<span class="banner err" style="margin:0">${state.sendErr}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- Start session ----
+
+function startSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Start session</h2></div>
+      ${() => state.presetsErr ? html`<div class="banner err">${state.presetsErr}</div>` : ''}
+      ${() => {
+        if (!state.presets) return state.presetsErr ? '' : html`<div class="empty">Loading presets…</div>`;
+        if (!state.presets.length) {
+          return html`<div class="empty">No presets configured. Ask an operator to add one to start sessions from here.</div>`;
+        }
+        return html`
+          <div class="start-row">
+            <select value="${state.selectedPreset}" @change="${(e) => { state.selectedPreset = e.target.value; }}">
+              ${state.presets.map(p => html`<option value="${p.name}">${p.name}${p.user ? ' [' + p.user + ']' : ''}${p.cwd ? ' (' + p.cwd + ')' : ''}</option>`.key(p.name))}
+            </select>
+            <button class="primary" @click="${startSession}" disabled="${state.startBusy}">${state.startBusy ? 'Starting…' : 'Start'}</button>
+            ${state.startOk ? html`<span class="ok-msg">${state.startOk}</span>` : ''}
+            ${state.startErr ? html`<span class="banner err" style="margin:0">${state.startErr}</span>` : ''}
+          </div>
+        `;
+      }}
+    </section>
+  `;
+}
+
+// ---- App ----
+
+function App() {
+  return html`
+    ${statusSection()}
+    ${agentsSection()}
+    ${paneSection()}
+    ${sendSection()}
+    ${startSection()}
+  `;
+}
+
+App()(document.getElementById('app'));
+
+// ---- Initial load + polling ----
+loadStatus();
+loadAgents();
+loadPresets();
+
+// The agent list (and in particular the "blocked" signal) isn't covered by
+// an explicit cadence in the API contract, but a static list defeats the
+// point of a monitoring page - refresh it at a modest 5s cadence, paused
+// while the tab is hidden, same as everything else here.
+setInterval(() => { if (!document.hidden) { loadStatus(); loadAgents(); } }, 5000);
+
+// Pane polling: only while a pane is open (an agent is selected) and the
+// tab is visible, per spec.
+setInterval(() => { if (!document.hidden && state.selected) loadPane(); }, 3000);
+
+// The polls above are gated on document.hidden so a forgotten background
+// tab does not keep firing ssh probes at the fleet. The cost of that is
+// stale data on return, so refresh once immediately when the tab becomes
+// visible rather than making the user wait out the next interval.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  loadAgents();
+  loadPresets();
+  loadStatus();
+  if (state.selected) loadPane();
+});
+</script>
+</body>
+</html>

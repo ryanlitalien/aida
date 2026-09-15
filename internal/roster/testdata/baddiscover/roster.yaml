@@ -1,0 +1,20 @@
+version: 1
+entries:
+  aida:
+    kind: aida
+    call_sign: Aida
+    profiles: []
+
+  broken-team:
+    kind: subagent
+    discover: testdata/does-not-exist-xyz
+    profiles: [work]
+    subagent:
+      dir: testdata/somewhere
+
+  standalone:
+    kind: subagent
+    description: Fine on its own, unaffected by the sibling discovery failure.
+    profiles: [work]
+    subagent:
+      dir: testdata/somewhere
