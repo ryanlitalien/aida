@@ -12,25 +12,33 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ryanlitalien/aida/internal/jarvis"
 	"github.com/ryanlitalien/aida/internal/jarvis/audio"
+	"github.com/ryanlitalien/aida/internal/jarvis/audit"
 	"github.com/ryanlitalien/aida/internal/jarvis/tts"
 )
 
 // fakeTranscriber, fakeAsker, and fakeSynth let handleTurn be exercised
 // end-to-end without a real whisper binary, Anthropic key, or ElevenLabs
 // account - exactly the point of Transcriber/Asker/tts.Synthesizer being
-// interfaces.
+// interfaces. Each carries an optional sleep so tests can exercise the
+// per-stage stt/llm/tts timing handleTurn now measures without an actual
+// slow dependency.
 
 type fakeTranscriber struct {
 	text  string
 	err   error
 	calls int
+	sleep time.Duration
 }
 
 func (f *fakeTranscriber) Transcribe(_ context.Context, _ string) (string, error) {
 	f.calls++
+	if f.sleep > 0 {
+		time.Sleep(f.sleep)
+	}
 	return f.text, f.err
 }
 
@@ -38,12 +46,16 @@ type fakeAsker struct {
 	reply    string
 	err      error
 	calls    int
+	sleep    time.Duration
 	sessions []*jarvis.Session // records the sess argument of every call
 }
 
 func (f *fakeAsker) Ask(_ context.Context, sess *jarvis.Session, _ string) (string, error) {
 	f.calls++
 	f.sessions = append(f.sessions, sess)
+	if f.sleep > 0 {
+		time.Sleep(f.sleep)
+	}
 	return f.reply, f.err
 }
 
@@ -58,10 +70,14 @@ type fakeSynth struct {
 	err   error
 	calls int
 	name  string
+	sleep time.Duration
 }
 
 func (f *fakeSynth) Synthesize(_ context.Context, _ string) (string, error) {
 	f.calls++
+	if f.sleep > 0 {
+		time.Sleep(f.sleep)
+	}
 	if f.err != nil {
 		return "", f.err
 	}
@@ -462,6 +478,12 @@ func TestHandleTurn_HappyPath(t *testing.T) {
 	}
 	if resp.TookMs < 0 {
 		t.Errorf("took_ms = %d, want >= 0", resp.TookMs)
+	}
+	if resp.SttMs < 0 || resp.LlmMs < 0 || resp.TtsMs < 0 {
+		t.Errorf("stage timings must be >= 0: stt_ms=%d llm_ms=%d tts_ms=%d", resp.SttMs, resp.LlmMs, resp.TtsMs)
+	}
+	if got := resp.SttMs + resp.LlmMs + resp.TtsMs; got > resp.TookMs {
+		t.Errorf("stt_ms+llm_ms+tts_ms = %d must not exceed took_ms = %d", got, resp.TookMs)
 	}
 	if tr.calls != 1 || ask.calls != 1 || synth.calls != 1 {
 		t.Errorf("expected exactly one call per stage: transcribe=%d ask=%d synth=%d", tr.calls, ask.calls, synth.calls)
@@ -1005,4 +1027,130 @@ func TestPersonaResolution_HeaderAndQueryAgree(t *testing.T) {
 	if fromHeader.AckPath != fromQuery.AckPath {
 		t.Errorf("absent header = %q, absent query = %q - must agree", fromHeader.AckPath, fromQuery.AckPath)
 	}
+}
+
+// TestHandleTurn_StageTimingsReflectSleep proves stt_ms/llm_ms/tts_ms are
+// measured around the right call rather than all collapsing to took_ms (or
+// to zero): each fake stage sleeps a distinct, easily-distinguished
+// duration, and the response's per-stage field must be at least that long
+// while staying well clear of the OTHER stages' sleep amounts.
+func TestHandleTurn_StageTimingsReflectSleep(t *testing.T) {
+	const (
+		sttSleep = 40 * time.Millisecond
+		llmSleep = 80 * time.Millisecond
+		ttsSleep = 20 * time.Millisecond
+	)
+	tr := &fakeTranscriber{text: "hello", sleep: sttSleep}
+	ask := &fakeAsker{reply: "hi", sleep: llmSleep}
+	synth := &fakeSynth{dir: t.TempDir(), ext: ".wav", body: []byte("x"), name: "piper", sleep: ttsSleep}
+	s := newTestServer(onePersonaDeps(tr, ask, synth, testToken))
+
+	req := newTurnRequest(fakeWAV, testToken)
+	rec := httptest.NewRecorder()
+	s.handleTurn(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+	var resp turnResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	// Each measured stage must be at least as long as what it slept for
+	// (timers only run slow under load, never fast).
+	if resp.SttMs < sttSleep.Milliseconds() {
+		t.Errorf("stt_ms = %d, want >= %d", resp.SttMs, sttSleep.Milliseconds())
+	}
+	if resp.LlmMs < llmSleep.Milliseconds() {
+		t.Errorf("llm_ms = %d, want >= %d", resp.LlmMs, llmSleep.Milliseconds())
+	}
+	if resp.TtsMs < ttsSleep.Milliseconds() {
+		t.Errorf("tts_ms = %d, want >= %d", resp.TtsMs, ttsSleep.Milliseconds())
+	}
+	// And took_ms must cover all three stages combined, not just one of them.
+	if resp.TookMs < (sttSleep + llmSleep + ttsSleep).Milliseconds() {
+		t.Errorf("took_ms = %d, want >= sum of stage sleeps (%d)", resp.TookMs, (sttSleep + llmSleep + ttsSleep).Milliseconds())
+	}
+}
+
+// TestHandleTurn_AuditRecordWritten covers deliverable 2(c): a completed
+// turn appends exactly one audit.Record to Deps.Audit, tagged source="lmd"
+// so it's distinguishable from the desk-mic listener's own records in the
+// same file.
+func TestHandleTurn_AuditRecordWritten(t *testing.T) {
+	auditPath := filepath.Join(t.TempDir(), "audit.ndjson")
+	au, err := audit.New(auditPath)
+	if err != nil {
+		t.Fatalf("audit.New: %v", err)
+	}
+
+	tr := &fakeTranscriber{text: "what's on my plate today"}
+	ask := &fakeAsker{reply: "Three open tasks, sir."}
+	synth := &fakeSynth{dir: t.TempDir(), ext: ".wav", body: []byte("x"), name: "piper"}
+	d := onePersonaDeps(tr, ask, synth, testToken)
+	d.Audit = au
+	s := newTestServer(d)
+
+	req := newTurnRequest(fakeWAV, testToken)
+	rec := httptest.NewRecorder()
+	s.handleTurn(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+
+	raw, err := os.ReadFile(auditPath)
+	if err != nil {
+		t.Fatalf("read audit log: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("expected exactly one audit line, got %d: %q", len(lines), raw)
+	}
+	var got auditRecordForTest
+	if err := json.Unmarshal([]byte(lines[0]), &got); err != nil {
+		t.Fatalf("decode audit line: %v", err)
+	}
+	if got.Source != "lmd" {
+		t.Errorf("source = %q, want %q", got.Source, "lmd")
+	}
+	if got.Transcript != "what's on my plate today" {
+		t.Errorf("transcript = %q", got.Transcript)
+	}
+	if got.Reply != "Three open tasks, sir." {
+		t.Errorf("reply = %q", got.Reply)
+	}
+	if got.TookMs < 0 {
+		t.Errorf("took_ms = %d, want >= 0", got.TookMs)
+	}
+}
+
+// TestHandleTurn_NilAuditDoesNotBreakTurn covers the non-fatal contract:
+// Deps.Audit left nil (e.g. the audit log couldn't be opened at startup)
+// must not stop a turn from completing normally.
+func TestHandleTurn_NilAuditDoesNotBreakTurn(t *testing.T) {
+	tr := &fakeTranscriber{text: "hello"}
+	ask := &fakeAsker{reply: "hi"}
+	synth := &fakeSynth{dir: t.TempDir(), ext: ".wav", body: []byte("x"), name: "piper"}
+	d := onePersonaDeps(tr, ask, synth, testToken)
+	d.Audit = nil
+	s := newTestServer(d)
+
+	req := newTurnRequest(fakeWAV, testToken)
+	rec := httptest.NewRecorder()
+	s.handleTurn(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// auditRecordForTest decodes only the fields this package's tests care
+// about from an audit.ndjson line - a minimal mirror of audit.Record rather
+// than importing its exact shape, so this test doesn't need to track every
+// field the audit package adds over time.
+type auditRecordForTest struct {
+	Source     string `json:"source"`
+	Transcript string `json:"transcript"`
+	Reply      string `json:"reply"`
+	TookMs     int64  `json:"took_ms"`
 }

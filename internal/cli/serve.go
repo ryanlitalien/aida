@@ -748,6 +748,16 @@ func startLMDServer(primary, twin *jarvis.Assistant, port int, whisperModel stri
 		model = stt.TinyEnModelPath()
 	}
 
+	// Best-effort audit logging - see lmd.Deps.Audit's doc comment. A
+	// failure to open the audit log (e.g. a permissions problem under
+	// ~/.aida/brain) must never block LMD from starting; it just runs
+	// without per-turn audit records in that case.
+	auLogger, auErr := audit.New("")
+	if auErr != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  --lmd: open audit log: %v; LMD turns will not be audited\n", auErr)
+		auLogger = nil
+	}
+
 	mux := http.NewServeMux()
 	lmd.New(mux, lmd.Deps{
 		Transcriber:    &stt.Whisper{Model: model},
@@ -755,6 +765,7 @@ func startLMDServer(primary, twin *jarvis.Assistant, port int, whisperModel stri
 		DefaultPersona: defaultPersona,
 		Token:          token,
 		Version:        buildVersion(),
+		Audit:          auLogger,
 	})
 
 	lmdHTTP := &http.Server{Addr: addr, Handler: mux}
