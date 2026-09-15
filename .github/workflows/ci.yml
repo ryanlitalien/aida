@@ -18,6 +18,42 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 
+  changelog:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version
+        id: next
+        run: echo "next=$(bash .github/scripts/next-version.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Require a changelog entry for the next version
+        env:
+          NEXT: ${{ steps.next.outputs.next }}
+        run: |
+          git fetch origin "$GITHUB_BASE_REF"
+
+          if git diff --quiet FETCH_HEAD -- CHANGELOG.md; then
+            echo "::error::CHANGELOG.md is unchanged from $GITHUB_BASE_REF. Add an entry under '## $NEXT' (next=latest v1+ tag's minor + 1, or v1.0.0 if none exists)."
+            exit 1
+          fi
+
+          if ! awk -v heading="## $NEXT" '
+            $0 == heading { in_section = 1; found_heading = 1; next }
+            in_section && /^## / { in_section = 0 }
+            in_section && /^- / { found_bullet = 1 }
+            END { if (!(found_heading && found_bullet)) exit 1 }
+          ' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md must have a '## $NEXT' heading followed by at least one '- ' bullet before the next '## ' heading. If another PR already merged and claimed that heading, rebase onto $GITHUB_BASE_REF and bump your heading to the new next version."
+            exit 1
+          fi
+
+          echo "CHANGELOG.md has a valid entry under '## $NEXT'."
+
   release:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -28,31 +64,48 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - name: Compute next version
+        id: next
+        run: echo "next=$(bash .github/scripts/next-version.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        env:
+          NEXT: ${{ steps.next.outputs.next }}
+        run: |
+          notes_file="$(mktemp)"
+          awk -v heading="## $NEXT" '
+            $0 == heading { in_section = 1; next }
+            in_section && /^## / { exit }
+            in_section { print }
+          ' CHANGELOG.md > "$notes_file"
+
+          if ! grep -q '[^[:space:]]' "$notes_file"; then
+            echo "::error::CHANGELOG.md has no '## $NEXT' section with content. Refusing to release without notes - the changelog job should have caught this on the PR."
+            exit 1
+          fi
+
+          echo "file=$notes_file" >> "$GITHUB_OUTPUT"
+
       - name: Bump minor version and tag
         id: tag
+        env:
+          NEXT: ${{ steps.next.outputs.next }}
         run: |
-          latest=$(git tag -l 'v*' --sort=-v:refname | head -1)
-          if [ -z "$latest" ]; then
-            next="v0.1.0"
-          else
-            major=$(echo "$latest" | cut -d. -f1)
-            minor=$(echo "$latest" | cut -d. -f2)
-            next="${major}.$((minor + 1)).0"
-          fi
-          echo "tag=$next" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$next" -m "Release $next"
-          git push origin "$next"
+          git tag -a "$NEXT" -m "Release $NEXT"
+          git push origin "$NEXT"
 
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes ${{ steps.notes.outputs.file }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
