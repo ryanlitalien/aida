@@ -6,6 +6,11 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.1.0
+
+- Plan doc status reflects the 2026-09-15 fresh-start cut.
+- Dropped the @claude and auto-review workflows from the public repo; they need a secret this repo does not carry and would let any commenter start an agent run.
+
 ## v1.0.0
 
 - Initial public release, cut from the private development repo.
