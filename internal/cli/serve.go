@@ -422,7 +422,11 @@ func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvi
 	// down the rest of the daemon.
 	var lmdSrv *http.Server
 	if enableLMD {
-		lmdSrv = startLMDServer(assistant, aidaAssistant, lmdPort)
+		var lmdWhisperModel string
+		if p, ok := cfg.Profiles[profileName]; ok && p.Serve != nil {
+			lmdWhisperModel = p.Serve.LMDWhisperModel
+		}
+		lmdSrv = startLMDServer(assistant, aidaAssistant, lmdPort, lmdWhisperModel)
 	}
 
 	// Menu LAN listener: same separate-mux pattern as LMD above, but with
@@ -674,7 +678,13 @@ func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvi
 // section for the routing contract this wires up. Likewise for a missing
 // Tailscale interface or a bind failure: `aida serve` must still come up
 // normally with just the loopback daemon in any of these cases.
-func startLMDServer(primary, twin *jarvis.Assistant, port int) *http.Server {
+//
+// whisperModel overrides the Transcriber's whisper.cpp model path (profile
+// serve.lmd_whisper_model); empty falls back to stt.TinyEnModelPath() - see
+// that function's doc comment for why LMD defaults away from Whisper's own
+// zero-value default (small.en), which assumes GPU-accelerated hardware LMD
+// may not have.
+func startLMDServer(primary, twin *jarvis.Assistant, port int, whisperModel string) *http.Server {
 	if primary == nil {
 		fmt.Fprintln(os.Stderr, "⚠️  --lmd requires Jarvis (drop --no-jarvis); LMD listener not started")
 		return nil
@@ -733,9 +743,14 @@ func startLMDServer(primary, twin *jarvis.Assistant, port int) *http.Server {
 		fmt.Fprintln(os.Stderr, "⚠️  --lmd: aida twin unavailable; serving the jarvis persona only (default persona degrades to jarvis)")
 	}
 
+	model := whisperModel
+	if model == "" {
+		model = stt.TinyEnModelPath()
+	}
+
 	mux := http.NewServeMux()
 	lmd.New(mux, lmd.Deps{
-		Transcriber:    &stt.Whisper{},
+		Transcriber:    &stt.Whisper{Model: model},
 		Personas:       personas,
 		DefaultPersona: defaultPersona,
 		Token:          token,

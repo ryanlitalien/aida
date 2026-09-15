@@ -19,9 +19,13 @@ type Whisper struct {
 	// "whisper-cpp" on PATH.
 	Bin string
 	// Model path. Empty defaults to ~/.aida/jarvis/models/ggml-small.en.bin
-	// (488 MB) - substantially better than tiny.en on technical vocabulary
-	// at the cost of ~100-300 ms of extra transcription time. Override
-	// to tiny.en for low-latency demos or to medium.en for max accuracy.
+	// (488 MB) - substantially better than tiny.en on technical vocabulary,
+	// at a cost that's only ~100-300 ms of extra transcription time on
+	// GPU-accelerated hardware (e.g. Apple Silicon Metal). On weak/headless
+	// hardware with no GPU, that gap is far larger (small.en measured 94s vs
+	// tiny.en's 10.6s on an 11s clip on a 2-core Pentium) - see
+	// TinyEnModelPath for such callers. Override to medium.en for max
+	// accuracy where both compute and time are available.
 	Model string
 	// Language hint, default "en".
 	Language string
@@ -56,8 +60,23 @@ func (w *Whisper) modelPath() string {
 	if w.Model != "" {
 		return w.Model
 	}
+	return defaultModelPath("ggml-small.en.bin")
+}
+
+// TinyEnModelPath returns the path to the tiny.en whisper.cpp model under the
+// standard ~/.aida/jarvis/models directory (downloaded by
+// scripts/jarvis-deps.sh alongside small.en). Latency-sensitive callers that
+// can't assume Whisper's own zero-value default (ggml-small.en.bin - see
+// modelPath's doc comment) is cheap enough - e.g. the LMD/Android turn
+// handler in internal/jarvis/lmd, which may run on weak/headless hardware
+// with no GPU - set Model to this explicitly instead.
+func TinyEnModelPath() string {
+	return defaultModelPath("ggml-tiny.en.bin")
+}
+
+func defaultModelPath(filename string) string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".aida", "jarvis", "models", "ggml-small.en.bin")
+	return filepath.Join(home, ".aida", "jarvis", "models", filename)
 }
 
 // Transcribe runs whisper-cpp on the given WAV file and returns the
