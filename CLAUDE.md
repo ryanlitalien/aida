@@ -185,6 +185,8 @@ Real wake-triggered turns append to `~/.aida/brain/jarvis/audit.ndjson` (under t
 
 Skipped utterances, VAD blips, and whisper hallucinations (e.g. `[BLANK_AUDIO]`, `(upbeat music)`) are filtered out - the log captures Jarvis's actual behavior, not raw mic input. Errors writing the log are non-fatal.
 
+LMD (Android client, `internal/jarvis/lmd`) turns are logged to the same file too, tagged `"source": "lmd"` and carrying an additional `stt_ms` field, so the two pipelines are distinguishable in one place.
+
 ### Latency expectations
 
 - Local fast tools (`tasks_list`, `task_get`, `current_time`, `weather`): **2–4s** total round-trip

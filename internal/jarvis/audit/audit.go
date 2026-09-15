@@ -34,12 +34,20 @@ type ToolCall struct {
 // Record is one row in the audit log. Per-stage timings let you spot where
 // long round-trips spent their time without re-running the query.
 type Record struct {
-	Timestamp  string     `json:"ts"`
+	Timestamp string `json:"ts"`
+	// Source distinguishes which pipeline produced this turn: empty (the
+	// historical default) means the desk-mic wake-word listener; "lmd"
+	// means the Android client's LMD turn handler (internal/jarvis/lmd).
+	// Omitted on the wire for listener turns so existing audit tooling and
+	// the JSON shape documented in CLAUDE.md's Audit log section are
+	// unaffected.
+	Source     string     `json:"source,omitempty"`
 	StartedAt  string     `json:"started_at,omitempty"` // wake-fire time (RFC3339)
 	Transcript string     `json:"transcript"`           // raw whisper output
 	Query      string     `json:"query"`                // text after wake phrase
 	Reply      string     `json:"reply,omitempty"`      // Jarvis's spoken answer
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"` // per-tool timings
+	SttMs      int64      `json:"stt_ms,omitempty"`     // whisper transcription; LMD turns only (the desk-mic listener doesn't track this)
 	LLMMs      int64      `json:"llm_ms,omitempty"`     // sum of Anthropic round-trips
 	ToolMs     int64      `json:"tool_ms,omitempty"`    // sum of tool runs
 	TTSMs      int64      `json:"tts_ms,omitempty"`     // Piper synthesis

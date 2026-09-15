@@ -108,6 +108,13 @@ no transcoding happens on either side.
 
 Cap the body at **10 MB** (~5 min of 16k mono) via `http.MaxBytesReader`.
 
+The Transcriber defaults to whisper.cpp's tiny.en model (`stt.TinyEnModelPath`)
+rather than `stt.Whisper`'s own zero-value default (small.en) - the LMD daemon
+may run on weak/headless hardware with no GPU, where small.en's better
+accuracy isn't worth 5-10x the transcription time. Override via profile
+`serve.lmd_whisper_model` in `~/.aida/config.yaml` (e.g. to point at
+`ggml-small.en.bin` on capable hardware).
+
 **Response** `200`
 
 ```json
@@ -116,7 +123,10 @@ Cap the body at **10 MB** (~5 min of 16k mono) via `http.MaxBytesReader`.
   "reply":         "Three open tasks, sir. …",
   "audio":         "<base64>",
   "audio_format":  "mp3",
-  "took_ms":       4120
+  "took_ms":       4120,
+  "stt_ms":        820,
+  "llm_ms":        2600,
+  "tts_ms":        700
 }
 ```
 
@@ -124,6 +134,16 @@ Cap the body at **10 MB** (~5 min of 16k mono) via `http.MaxBytesReader`.
 assume one. Base64-in-JSON costs ~33% overhead (a 10s reply lands around
 200–600 KB) which is irrelevant over a tailnet and keeps the client to a single
 `kotlinx.serialization` decode. Revisit if streaming TTFA ever matters.
+
+`stt_ms`/`llm_ms`/`tts_ms` break `took_ms` down by pipeline stage - measured
+around `Transcriber.Transcribe`, `Asker.Ask`, and `Synth.Synthesize`
+respectively (they may not sum to exactly `took_ms`, which also covers the
+WAV read/write and silence-gate steps around them). Added alongside the
+pre-existing `took_ms` field, so a client that only reads `took_ms` keeps
+working unchanged. The daemon also prints one `📱 LMD turn: ...` log line per
+completed turn with the same breakdown, and appends a record to
+`~/.aida/brain/jarvis/audit.ndjson` tagged `"source": "lmd"` (see CLAUDE.md's
+Audit log section) - both non-fatal if they fail.
 
 **Errors** - `{"error": "…"}` with:
 

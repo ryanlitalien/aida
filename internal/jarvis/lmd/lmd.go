@@ -32,6 +32,7 @@ import (
 
 	"github.com/ryanlitalien/aida/internal/jarvis"
 	"github.com/ryanlitalien/aida/internal/jarvis/audio"
+	"github.com/ryanlitalien/aida/internal/jarvis/audit"
 	"github.com/ryanlitalien/aida/internal/jarvis/stt"
 	"github.com/ryanlitalien/aida/internal/jarvis/tts"
 )
@@ -143,6 +144,14 @@ type Deps struct {
 
 	Token   string // bearer token; see LoadOrGenerateToken
 	Version string // reported verbatim in the health response
+
+	// Audit, when non-nil, gets one record per completed turn appended to
+	// it - the same ~/.aida/brain/jarvis/audit.ndjson the desk-mic listener
+	// writes to (see internal/jarvis/audit), tagged with Source: "lmd" so
+	// the two are distinguishable in the log. Nil disables audit logging
+	// entirely (e.g. the audit dir couldn't be created); handleTurn must
+	// keep working either way - audit is observability, never load-bearing.
+	Audit *audit.Logger
 }
 
 // Server is the LMD HTTP handler set.
@@ -235,6 +244,15 @@ type turnResponse struct {
 	Audio       string `json:"audio"`        // base64
 	AudioFormat string `json:"audio_format"` // "mp3" (ElevenLabs) | "wav" (Piper)
 	TookMs      int64  `json:"took_ms"`
+
+	// SttMs, LlmMs, and TtsMs break TookMs down by pipeline stage - added
+	// alongside the existing TookMs (additive; an older client that only
+	// reads took_ms keeps working unchanged). Measured around exactly the
+	// three calls handleTurn's doc comment names: Transcriber.Transcribe,
+	// Asker.Ask, and Synth.Synthesize (+ the read of its output file).
+	SttMs int64 `json:"stt_ms"`
+	LlmMs int64 `json:"llm_ms"`
+	TtsMs int64 `json:"tts_ms"`
 }
 
 type errorResponse struct {
@@ -265,8 +283,10 @@ func (s *Server) handleTurn(w http.ResponseWriter, r *http.Request) {
 	// Resolve which persona answers this turn BEFORE doing any of the
 	// expensive work below - see resolvePersona's doc comment for the
 	// fallback contract (X-LMD-Persona absent/empty/unrecognized → default,
-	// never an error).
+	// never an error). personaName is the same resolution by name rather
+	// than PersonaDeps, used only for the log line and audit record below.
 	pd := s.resolvePersona(r)
+	personaName := s.resolvedPersonaName(r.Header.Get("X-LMD-Persona"))
 	if pd.Asker == nil || pd.Synth == nil {
 		writeError(w, http.StatusInternalServerError, "no persona configured on this LMD server")
 		return
@@ -308,8 +328,11 @@ func (s *Server) handleTurn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sttStart := time.Now()
 	transcript, err := s.deps.Transcriber.Transcribe(ctx, wavPath)
+	sttMs := time.Since(sttStart).Milliseconds()
 	if err != nil {
+		logTurnFailure(personaName, "stt", err, time.Since(start))
 		writeError(w, http.StatusInternalServerError, "transcribe: "+err.Error())
 		return
 	}
@@ -327,23 +350,56 @@ func (s *Server) handleTurn(w http.ResponseWriter, r *http.Request) {
 	// the sessions field's doc comment for why a mid-conversation persona
 	// switch still sees the prior turns.
 	sess := s.sessionFor(r.Header.Get("X-LMD-Session"))
+	llmStart := time.Now()
 	reply, err := pd.Asker.Ask(ctx, sess, transcript)
+	llmMs := time.Since(llmStart).Milliseconds()
 	if err != nil {
+		logTurnFailure(personaName, "llm", err, time.Since(start))
 		writeError(w, http.StatusInternalServerError, "ask: "+err.Error())
 		return
 	}
 
+	ttsStart := time.Now()
 	audioPath, err := pd.Synth.Synthesize(ctx, reply)
 	if err != nil {
+		logTurnFailure(personaName, "tts", err, time.Since(start))
 		writeError(w, http.StatusInternalServerError, "synthesize: "+err.Error())
 		return
 	}
 	defer os.Remove(audioPath)
 
 	audioBytes, err := os.ReadFile(audioPath)
+	ttsMs := time.Since(ttsStart).Milliseconds()
 	if err != nil {
+		logTurnFailure(personaName, "tts", err, time.Since(start))
 		writeError(w, http.StatusInternalServerError, "read synthesized audio: "+err.Error())
 		return
+	}
+
+	tookMs := time.Since(start).Milliseconds()
+
+	// One line per completed turn, mirroring the "📱 LMD listening" startup
+	// log's style - see startLMDServer in internal/cli/serve.go. Transcript
+	// is truncated so a long ramble doesn't blow out the line.
+	fmt.Fprintf(os.Stderr, "📱 LMD turn: persona=%s stt=%dms llm=%dms tts=%dms total=%dms transcript=%q\n",
+		personaName, sttMs, llmMs, ttsMs, tookMs, truncateForLog(transcript, 60))
+
+	// Best-effort audit record - see Deps.Audit's doc comment. A nil Audit
+	// (audit log couldn't be opened) or a write failure inside Append must
+	// never affect the turn; Append itself already treats write errors as
+	// non-fatal.
+	if s.deps.Audit != nil {
+		s.deps.Audit.Append(audit.Record{
+			Source:     "lmd",
+			StartedAt:  start.UTC().Format(time.RFC3339),
+			Transcript: transcript,
+			Query:      transcript,
+			Reply:      reply,
+			SttMs:      sttMs,
+			LLMMs:      llmMs,
+			TTSMs:      ttsMs,
+			TookMs:     tookMs,
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -352,8 +408,31 @@ func (s *Server) handleTurn(w http.ResponseWriter, r *http.Request) {
 		Reply:       reply,
 		Audio:       base64.StdEncoding.EncodeToString(audioBytes),
 		AudioFormat: strings.TrimPrefix(filepath.Ext(audioPath), "."),
-		TookMs:      time.Since(start).Milliseconds(),
+		TookMs:      tookMs,
+		SttMs:       sttMs,
+		LlmMs:       llmMs,
+		TtsMs:       ttsMs,
 	})
+}
+
+// logTurnFailure prints the failure-path counterpart to the per-turn success
+// log above: one stderr line naming which pipeline stage ("stt", "llm", or
+// "tts") didn't complete, so a scan of the daemon's log can tell "LMD is
+// slow" apart from "LMD is broken, and where."
+func logTurnFailure(persona, stage string, err error, elapsed time.Duration) {
+	fmt.Fprintf(os.Stderr, "📱 LMD turn failed: persona=%s stage=%s err=%q total=%dms\n",
+		persona, stage, err, elapsed.Milliseconds())
+}
+
+// truncateForLog shortens s to at most max runes for a log line, appending
+// an ellipsis when it does. Rune-aware so it doesn't split a multi-byte
+// character mid-sequence.
+func truncateForLog(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max]) + "…"
 }
 
 // handleAck implements `GET /lmd/v1/ack?persona=<persona>` (see
@@ -463,6 +542,18 @@ func (s *Server) personaDepsFor(name string) PersonaDeps {
 // personaDepsFor for the shared fallback contract.
 func (s *Server) resolvePersona(r *http.Request) PersonaDeps {
 	return s.personaDepsFor(normalizePersonaName(r.Header.Get("X-LMD-Persona")))
+}
+
+// resolvedPersonaName applies the exact same normalize-then-fallback
+// contract as personaDepsFor, but returns the resolved NAME rather than its
+// PersonaDeps - used only for the turn log line and audit record, which
+// want "aida"/"jarvis" rather than a struct of function values.
+func (s *Server) resolvedPersonaName(raw string) string {
+	name := normalizePersonaName(raw)
+	if _, ok := s.deps.Personas[name]; ok {
+		return name
+	}
+	return s.deps.DefaultPersona
 }
 
 // resolvePersonaQuery maps /lmd/v1/ack's `?persona=` query parameter to the

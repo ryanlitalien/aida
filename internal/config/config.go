@@ -382,6 +382,18 @@ type ServeConfig struct {
 	// the first matching key's list wins, else MicPrefer is used. Keys stop
 	// matching when a machine is renamed - re-key the config to the new name.
 	MicPreferByHost map[string][]string `yaml:"mic_prefer_by_host,omitempty"`
+	// LMDWhisperModel overrides the whisper.cpp model path the LMD (Android
+	// client) turn handler's Transcriber uses - see internal/jarvis/lmd and
+	// stt.TinyEnModelPath. Empty defaults to tiny.en: unlike the desk-mic
+	// listener, which typically runs on Apple Silicon with Metal
+	// acceleration and can afford the small.en default's better accuracy
+	// for ~100-300ms of extra time per turn, the LMD daemon may run on much
+	// weaker hardware (e.g. a 2-core Pentium with no GPU), where small.en
+	// measured 94s versus tiny.en's 10.6s on an 11s clip. Set to an
+	// explicit ggml-*.bin path (e.g.
+	// ~/.aida/jarvis/models/ggml-small.en.bin) to trade latency for
+	// accuracy on capable hardware.
+	LMDWhisperModel string `yaml:"lmd_whisper_model,omitempty"`
 }
 
 // ResolveMicPrefer returns the mic-preference list for the given machine name:
