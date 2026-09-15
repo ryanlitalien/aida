@@ -6,6 +6,11 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.2.0
+
+- LMD (Android client) turns now default to whisper.cpp's tiny.en model instead of small.en, overridable via profile `serve.lmd_whisper_model`, since the LMD daemon may run on weak/headless hardware where small.en's transcription time is prohibitive.
+- LMD turns are now instrumented per-stage (`stt_ms`/`llm_ms`/`tts_ms` in the `/lmd/v1/turn` response, a `📱 LMD turn: ...` log line, and an audit record tagged `source: "lmd"`), matching the desk-mic listener's observability.
+
 ## v1.1.0
 
 - Plan doc status reflects the 2026-09-15 fresh-start cut.
