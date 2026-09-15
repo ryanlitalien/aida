@@ -339,6 +339,39 @@ func TestBurndownPath(t *testing.T) {
 	})
 }
 
+func TestServeConfigLMDWhisperModelPath(t *testing.T) {
+	t.Run("nil ServeConfig returns empty", func(t *testing.T) {
+		var s *ServeConfig
+		if got := s.LMDWhisperModelPath(); got != "" {
+			t.Errorf("LMDWhisperModelPath() on nil = %q, want empty", got)
+		}
+	})
+
+	t.Run("empty model path returns empty", func(t *testing.T) {
+		s := &ServeConfig{LMDWhisperModel: ""}
+		if got := s.LMDWhisperModelPath(); got != "" {
+			t.Errorf("LMDWhisperModelPath() with empty = %q, want empty", got)
+		}
+	})
+
+	t.Run("tilde path is expanded", func(t *testing.T) {
+		tmpHome := t.TempDir()
+		t.Setenv("HOME", tmpHome)
+		s := &ServeConfig{LMDWhisperModel: "~/.aida/jarvis/models/ggml-small.en.bin"}
+		want := filepath.Join(tmpHome, ".aida/jarvis/models/ggml-small.en.bin")
+		if got := s.LMDWhisperModelPath(); got != want {
+			t.Errorf("LMDWhisperModelPath() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("absolute path is unchanged", func(t *testing.T) {
+		s := &ServeConfig{LMDWhisperModel: "/usr/local/models/ggml-tiny.en.bin"}
+		if got := s.LMDWhisperModelPath(); got != "/usr/local/models/ggml-tiny.en.bin" {
+			t.Errorf("LMDWhisperModelPath() = %q, want %q", got, "/usr/local/models/ggml-tiny.en.bin")
+		}
+	})
+}
+
 func TestSourceHasCapability(t *testing.T) {
 	src := &Source{
 		Capabilities: []string{"sql-query", "partner-lookup", "gmv-analysis"},

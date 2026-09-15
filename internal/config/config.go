@@ -419,6 +419,16 @@ func (s *ServeConfig) ResolveMicPrefer(host string) []string {
 	return s.MicPrefer
 }
 
+// LMDWhisperModelPath returns the resolved path to the LMD (Android client)
+// whisper model, with tilde expansion applied. Empty means "not configured" -
+// callers should fall back to the default tiny.en model.
+func (s *ServeConfig) LMDWhisperModelPath() string {
+	if s == nil || s.LMDWhisperModel == "" {
+		return ""
+	}
+	return expandPath(s.LMDWhisperModel)
+}
+
 // DailyConfig holds per-profile settings for `aida daily`.
 // Nil or Enabled=false means the profile has not opted in.
 type DailyConfig struct {

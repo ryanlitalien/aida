@@ -424,7 +424,7 @@ func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvi
 	if enableLMD {
 		var lmdWhisperModel string
 		if p, ok := cfg.Profiles[profileName]; ok && p.Serve != nil {
-			lmdWhisperModel = p.Serve.LMDWhisperModel
+			lmdWhisperModel = p.Serve.LMDWhisperModelPath()
 		}
 		lmdSrv = startLMDServer(assistant, aidaAssistant, lmdPort, lmdWhisperModel)
 	}
