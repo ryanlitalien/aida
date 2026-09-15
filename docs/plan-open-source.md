@@ -1,6 +1,6 @@
 # Plan: Open-sourcing Aida
 
-**Branch**: `main` · **Status**: chunks A/B/C merged (PR #185, 2026-09-14); see Checklist · **Deliverables**: (1) a public `aida` repo a stranger can clone, build, and run; (2) a blog series about building it and the projects it spawned.
+**Branch**: `main` · **Status**: public repo live at github.com/ryanlitalien/aida (cut 2026-09-15); see Checklist · **Deliverables**: (1) a public `aida` repo a stranger can clone, build, and run; (2) a blog series about building it and the projects it spawned.
 
 This is the umbrella plan. It covers what Aida is (the narrative the README and the blog both need), what actually blocks publication (a concrete audit of this repo as of 2026-08-21), what happens to each satellite repo (aida-config, aida-brain, aida-wiki, aida-android, aida-agents, life-log), and the phased workplan to get there.
 
@@ -76,8 +76,8 @@ Goal: the material the blog sidebars link to and the README embeds, all living i
 - [ ] Blog part 4 "What it spawned": same loop, ends with the announcement
 - [ ] Video pilot (four screencasts, demo profile with fictional seeds only, never the real brain); part 1 video can be backfilled; task #478 (Manim) informs the format
 - [x] Decide: do the personal pages (`/menu`, `/habits`) and their `~/dev/health/...` defaults ship in public aida, or get extracted? Decided 2026-09-14: ship as-is. They are config-overridable, degrade quietly when the paths don't exist, and carry no personal data; extraction gates nothing
-- [ ] The fresh-start cut, on Ryan's go, alongside part 4: rename this repo `aida-private` (stays writable, not archived, per the 2026-09-14 decision), create public `ryanlitalien/aida` seeded with one initial commit of the scrubbed tree, re-point `origin` on this machine, edith, and photon, then close #216
-- [ ] At the cut, strip `scripts/oss-scan.sh` and its `ci.yml` step from the public initial commit (spotted 2026-09-13): the scan quotes every private pattern it guards - employer name and ticker, the real merchant list, the work username - so publishing it publishes the secret map. It stays in `aida-private` (and CI there keeps running it) as the pre-publish gate; the public repo optionally gets a generic secrets check (gitleaks-style) with no personal patterns
+- [x] The fresh-start cut, on Ryan's go, alongside part 4: rename this repo `aida-private` (stays writable, not archived, per the 2026-09-14 decision), create public `ryanlitalien/aida` seeded with one initial commit of the scrubbed tree, re-point `origin` on this machine, edith, and photon, then close #216 (done 2026-09-15: renamed, public repo seeded from one commit, origins re-pointed on edith and minty; photon pending)
+- [x] At the cut, strip `scripts/oss-scan.sh` and its `ci.yml` step from the public initial commit (spotted 2026-09-13): the scan quotes every private pattern it guards - employer name and ticker, the real merchant list, the work username - so publishing it publishes the secret map. It stays in `aida-private` (and CI there keeps running it) as the pre-publish gate; the public repo optionally gets a generic secrets check (gitleaks-style) with no personal patterns
 
 ### Coming soon (non-blocking)
 
