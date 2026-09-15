@@ -115,6 +115,17 @@ accuracy isn't worth 5-10x the transcription time. Override via profile
 `serve.lmd_whisper_model` in `~/.aida/config.yaml` (e.g. to point at
 `ggml-small.en.bin` on capable hardware).
 
+Transcribe also auto-sizes whisper.cpp's `-ac`/`--audio-ctx` flag from each
+clip's own duration (`stt.Whisper.AudioCtx`, default `0`): whisper.cpp always
+encodes a full 30-second window on a CPU-only host regardless of how short
+the clip is, so a 3s LMD turn otherwise costs as much to transcribe as a
+30s one. Auto mode reads the WAV's duration from its header and shrinks the
+context accordingly, falling back to full context (the flag omitted) when
+the duration can't be determined or the clip is 28s or longer. Set
+`AudioCtx` to `-1` to always use full context (e.g. on GPU-accelerated
+hardware where the encode is already fast) or to a positive fixed value to
+bypass auto-sizing.
+
 **Response** `200`
 
 ```json
