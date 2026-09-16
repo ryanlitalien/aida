@@ -218,6 +218,48 @@ func TestLint_IssuesSortedErrorsFirstThenEntry(t *testing.T) {
 	}
 }
 
+// TestLintSubagentModel checks the subagent.model flag-injection guard:
+// it rejects a leading '-' (claude would parse it as another flag) or any
+// embedded whitespace (not a single argv token), but never allowlists
+// specific model names -- new ones appear too often to enumerate.
+func TestLintSubagentModel(t *testing.T) {
+	cases := []struct {
+		model   string
+		wantErr bool
+	}{
+		{"", false},
+		{"sonnet", false},
+		{"claude-sonnet-5", false},
+		{"opus[1m]", false},
+		{"--allowedTools", true},
+		{"-x", true},
+		{"sonnet --verbose", true},
+		{"a\tb", true},
+	}
+	for _, c := range cases {
+		t.Run(c.model, func(t *testing.T) {
+			e := &Entry{Name: "x", Kind: KindSubagent, Subagent: &SubagentSpec{Dir: "testdata", Model: c.model}}
+			issues := validateSubagentSlugAndDir("x", e)
+			var modelIssue *LintIssue
+			for i := range issues {
+				if strings.Contains(issues[i].Message, "subagent.model") {
+					modelIssue = &issues[i]
+					break
+				}
+			}
+			if c.wantErr && modelIssue == nil {
+				t.Errorf("model %q: expected a subagent.model issue, got %+v", c.model, issues)
+			}
+			if !c.wantErr && modelIssue != nil {
+				t.Errorf("model %q: unexpected subagent.model issue: %+v", c.model, *modelIssue)
+			}
+			if modelIssue != nil && modelIssue.Severity != LintError {
+				t.Errorf("model %q: severity = %q, want %q", c.model, modelIssue.Severity, LintError)
+			}
+		})
+	}
+}
+
 func TestHasError(t *testing.T) {
 	if HasError(nil) {
 		t.Error("HasError(nil) = true, want false")

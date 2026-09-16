@@ -47,6 +47,41 @@ func TestBuildSubagentPrompt_QuotingIsInert(t *testing.T) {
 	}
 }
 
+func TestClaudeArgs(t *testing.T) {
+	cases := []struct {
+		name   string
+		prompt string
+		model  string
+		want   []string
+	}{
+		{
+			name:   "empty model: no --model flag",
+			prompt: "what's in the ready queue",
+			model:  "",
+			want:   []string{"--print", "--dangerously-skip-permissions", "what's in the ready queue"},
+		},
+		{
+			name:   "model set: --model inserted before the prompt",
+			prompt: "what's in the ready queue",
+			model:  "sonnet",
+			want:   []string{"--print", "--dangerously-skip-permissions", "--model", "sonnet", "what's in the ready queue"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := claudeArgs(tc.prompt, tc.model)
+			if len(got) != len(tc.want) {
+				t.Fatalf("claudeArgs(%q, %q) = %v, want %v", tc.prompt, tc.model, got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("claudeArgs(%q, %q)[%d] = %q, want %q", tc.prompt, tc.model, i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
 func TestNewSubagentBackend_RequiresDir(t *testing.T) {
 	if _, err := newSubagentBackend(&Entry{Name: "x", Kind: KindSubagent}, Deps{}); err == nil {
 		t.Fatal("expected an error when Subagent is nil")
@@ -123,6 +158,33 @@ func containsEnv(env []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func TestNewSubagentBackend_CarriesModel(t *testing.T) {
+	e := &Entry{
+		Name: "x", Kind: KindSubagent,
+		Subagent: &SubagentSpec{Dir: "/tmp/somewhere", Model: "sonnet"},
+	}
+	b, err := newSubagentBackend(e, Deps{})
+	if err != nil {
+		t.Fatalf("newSubagentBackend: %v", err)
+	}
+	sb := b.(*subagentBackend)
+	if sb.model != "sonnet" {
+		t.Errorf("model = %q, want %q", sb.model, "sonnet")
+	}
+}
+
+func TestNewSubagentBackend_EmptyModelInherits(t *testing.T) {
+	e := &Entry{Name: "x", Kind: KindSubagent, Subagent: &SubagentSpec{Dir: "/tmp/somewhere"}}
+	b, err := newSubagentBackend(e, Deps{})
+	if err != nil {
+		t.Fatalf("newSubagentBackend: %v", err)
+	}
+	sb := b.(*subagentBackend)
+	if sb.model != "" {
+		t.Errorf("model = %q, want empty (inherit default)", sb.model)
+	}
 }
 
 func TestNewSubagentBackend_ExpandsHomeDir(t *testing.T) {

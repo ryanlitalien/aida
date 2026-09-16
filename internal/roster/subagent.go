@@ -34,6 +34,7 @@ type subagentBackend struct {
 	name    string
 	dir     string
 	agent   string
+	model   string
 	timeout time.Duration
 }
 
@@ -51,6 +52,7 @@ func newSubagentBackend(e *Entry, _ Deps) (Backend, error) {
 		name:    e.Name,
 		dir:     config.ExpandPath(e.Subagent.Dir),
 		agent:   e.Subagent.Agent,
+		model:   e.Subagent.Model,
 		timeout: timeout,
 	}, nil
 }
@@ -81,21 +83,35 @@ func buildSubagentPrompt(agent, task string) string {
 func (b *subagentBackend) Ask(ctx context.Context, req Request) (Result, error) {
 	prompt := buildSubagentPrompt(b.agent, req.Task)
 	env := BumpDispatchDepthEnv(config.ScrubAnthropicCreds(os.Environ()))
-	res := RunClaudeIn(ctx, b.dir, prompt, b.timeout, env)
+	res := RunClaudeIn(ctx, b.dir, prompt, b.model, b.timeout, env)
 	res.Entry = b.name
 	return res, nil
 }
 
+// claudeArgs builds the argv passed to the `claude` binary: `--print
+// --dangerously-skip-permissions`, an optional `--model <model>` when
+// model is non-empty, and prompt last. Factored out of RunClaudeIn so the
+// argv shape is unit-testable without shelling out.
+func claudeArgs(prompt, model string) []string {
+	args := []string{"--print", "--dangerously-skip-permissions"}
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	return append(args, prompt)
+}
+
 // RunClaudeIn runs `claude --print --dangerously-skip-permissions
-// <prompt>` in dir, bounded by timeout, with env as the subprocess
-// environment. It is the shared transport behind every roster subagent
-// backend and the "aida ask aida" charter fallback (internal/dispatch),
-// so both paths behave identically -- same timeout handling, same empty/
-// refusal detection. The returned Result has no Entry set; callers that
-// need attribution (a named roster entry) fill it in themselves.
-func RunClaudeIn(ctx context.Context, dir, prompt string, timeout time.Duration, env []string) Result {
+// [--model <model>] <prompt>` in dir, bounded by timeout, with env as the
+// subprocess environment. When model is empty, no `--model` flag is
+// passed and `claude` inherits Claude Code's configured default. It is
+// the shared transport behind every roster subagent backend and the
+// "aida ask aida" charter fallback (internal/dispatch), so both paths
+// behave identically -- same timeout handling, same empty/refusal
+// detection. The returned Result has no Entry set; callers that need
+// attribution (a named roster entry) fill it in themselves.
+func RunClaudeIn(ctx context.Context, dir, prompt, model string, timeout time.Duration, env []string) Result {
 	res, err := execx.Run(ctx, "claude",
-		[]string{"--print", "--dangerously-skip-permissions", prompt},
+		claudeArgs(prompt, model),
 		execx.RunOpts{
 			Timeout: timeout,
 			Dir:     dir,

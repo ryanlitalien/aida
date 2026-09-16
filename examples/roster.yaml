@@ -45,6 +45,11 @@ entries:
   #   subagent:
   #     dir: ~/dev/avengers-hq
   #     agent: quartermaster
+  #     # Optional. Any value `claude --model` accepts: an alias for the latest
+  #     # model ('sonnet', 'opus', 'haiku', 'fable', with an optional [1m] suffix
+  #     # for the 1M context variant) or a full id like 'claude-sonnet-5'.
+  #     # Unset = the run inherits your Claude Code default (settings.json).
+  #     model: sonnet
 
   # A source-backed call-sign: no persona, just a friendly front for an
   # existing aida library source. "what's on the training schedule?" routes

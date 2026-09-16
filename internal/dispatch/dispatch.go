@@ -178,7 +178,7 @@ func (d *Dispatcher) fallbackCharter(ctx context.Context, dir, task string) (str
 
 	prompt := charterPromptPrefix + task
 	env := roster.BumpDispatchDepthEnv(config.ScrubAnthropicCreds(os.Environ()))
-	res := roster.RunClaudeIn(ctx, dir, prompt, fallbackTimeout, env)
+	res := roster.RunClaudeIn(ctx, dir, prompt, "", fallbackTimeout, env)
 
 	if res.Status == roster.StatusTimeout {
 		return res.Text, fmt.Errorf("fallback query timed out after %s", fallbackTimeout)

@@ -121,6 +121,9 @@ func TestLoad_HandAuthoredOverrideWins(t *testing.T) {
 	if pm.Description != wantDesc {
 		t.Errorf("product-manager.Description = %q, want hand-authored override %q", pm.Description, wantDesc)
 	}
+	if pm.Subagent == nil || pm.Subagent.Model != "sonnet" {
+		t.Errorf("product-manager.Subagent.Model = %+v, want Model=sonnet (round-tripped from testdata/roster.yaml)", pm.Subagent)
+	}
 	if pm.DiscoveredFrom != "" {
 		t.Errorf("product-manager.DiscoveredFrom = %q, want empty (hand-authored, not discovered)", pm.DiscoveredFrom)
 	}

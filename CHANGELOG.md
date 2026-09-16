@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.6.0
+
+- Roster `subagent` entries can now pin the Claude model their `claude --print` transport runs on via a new `subagent.model` field, passed through verbatim as `--model <value>` (an alias like `sonnet`/`opus`/`haiku`/`fable`, or a full model id), so cheap reporting personas can run on a lighter model instead of inheriting Claude Code's configured default; leaving it unset keeps the old inherit-the-default behavior.
+
 ## v1.5.0
 
 - Removed the open-sourcing plan, launch plan, and fresh-start cut runbook from the public tree (they documented the publication process itself, not the architecture), and scrubbed remaining hostnames and personal notes from the system-map report, the memory-bridge design doc, and the burndown example.
