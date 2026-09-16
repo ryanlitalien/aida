@@ -51,7 +51,7 @@ floors:
   bedrock-butterstack:
     # No live provider entry in ~/.aida/models.yaml yet (no Bedrock probe
     # wired up) -- kept here so it starts matching the moment one is added.
-    monthly: {floor_usd: 15, note: "company money; Kevin's Scarlett runs share it"}
+    monthly: {floor_usd: 15, note: "company money; a co-founder's agent runs share it"}
 
 # Overnight is the window in which the burn-down runs unattended. A window
 # whose reset lands before the end of this window (i.e. it resets before
