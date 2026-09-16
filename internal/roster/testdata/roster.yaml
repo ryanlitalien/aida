@@ -25,6 +25,7 @@ entries:
     subagent:
       dir: testdata/butterstack-stub
       agent: product-manager
+      model: sonnet
 
   workouts:
     kind: subagent

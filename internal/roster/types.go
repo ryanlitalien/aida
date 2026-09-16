@@ -66,6 +66,12 @@ type SubagentSpec struct {
 	Dir     string `yaml:"dir"`                       // repo/folder to run claude in
 	Agent   string `yaml:"agent,omitempty"`           // .claude/agents/ slug; "" = plain claude-project delegation
 	Timeout int    `yaml:"timeout_seconds,omitempty"` // 0 = DefaultSubagentTimeout
+	// Model, when set, is passed verbatim as `--model <value>` to
+	// `claude --print`, so it takes anything that flag does: an alias for
+	// the latest model ("sonnet", "opus", "haiku", "fable", optionally with
+	// a "[1m]" suffix) or a full id such as "claude-sonnet-5". Empty =
+	// inherit Claude Code's configured default (settings.json).
+	Model string `yaml:"model,omitempty"`
 }
 
 // SourceSpec pins a request to one aida library source.

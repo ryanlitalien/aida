@@ -229,6 +229,20 @@ func validateSubagentSlugAndDir(name string, e *Entry) []LintIssue {
 			Message: fmt.Sprintf("subagent.agent %q must match %s", e.Subagent.Agent, slugPattern.String())})
 	}
 
+	// subagent.Model is passed verbatim as a single argv element to
+	// `claude --model <value>` (see subagent.go) -- there is no shell to
+	// inject into, so this is a flag-injection guard, not a model
+	// registry. New model names/aliases appear constantly, so we never
+	// allowlist them: we only reject shapes claude would misparse, a
+	// leading '-' (read as another flag) or embedded whitespace (not a
+	// single argv token).
+	if m := e.Subagent.Model; m != "" {
+		if strings.HasPrefix(m, "-") || strings.ContainsAny(m, " \t\r\n") {
+			issues = append(issues, LintIssue{Entry: name, Severity: LintError,
+				Message: fmt.Sprintf("subagent.model %q must be a single model name or alias (no leading '-', no whitespace); it is passed verbatim to claude --model", m)})
+		}
+	}
+
 	if e.Subagent.Dir == "" {
 		return issues
 	}
