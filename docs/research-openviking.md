@@ -1,6 +1,6 @@
 # Research: OpenViking vs Aida
 
-**Date**: 2026-08-25 · **Status**: reference / blog material · **Feeds**: `plan-open-source.md` Phase 4, blog article #4 (memory tiering)
+**Date**: 2026-08-25 · **Status**: reference / blog material · **Feeds**: blog article #4 (memory tiering)
 
 ByteDance's Volcano Engine open-sourced OpenViking in January 2026 and it took off fast. This note pins down what it actually is, how it maps onto Aida, what's worth borrowing, and what to leave alone. Snapshot as of 2026-08-25; the project moves quickly, so re-verify numbers before publishing anything.
 

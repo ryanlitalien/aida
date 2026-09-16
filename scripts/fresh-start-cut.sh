@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
-# fresh-start-cut.sh - builds the public export tree (step c of
-# docs/fresh-start-cut.md) from the current HEAD of this repo's main
-# branch. Safe by default: never touches GitHub, never pushes, never
-# commits. Default mode is a dry run that only prints what it would do.
+# fresh-start-cut.sh - builds the public export tree (step c of the
+# fresh-start cut runbook, kept in the private repo) from the current HEAD
+# of this repo's main branch. Safe by default: never touches GitHub, never
+# pushes, never commits. Default mode is a dry run that only prints what
+# it would do.
 #
 # Usage:
 #   scripts/fresh-start-cut.sh              # dry run (no filesystem writes)
@@ -19,8 +20,8 @@
 #   4. Drops scripts/fresh-start-cut/secrets-scan.yml into the export's
 #      .github/workflows/secrets-scan.yml.
 #   5. git-inits the export directory and stages everything (git add -A)
-#      so docs/fresh-start-cut.md step (d) can commit directly from it -
-#      this script does NOT create that commit itself.
+#      so the fresh-start cut runbook's step (d) can commit directly from
+#      it - this script does NOT create that commit itself.
 #   6. Verifies: no file named oss-scan.sh anywhere in the export, and
 #      this repo's own scripts/oss-scan.sh (invoked against the export
 #      tree, not copied there) finds nothing. The private patterns it
@@ -198,7 +199,7 @@ build_export() {
 
   echo
   echo "fresh-start-cut: export built at $dir (git-initialized, all files staged, not committed)."
-  echo "fresh-start-cut: next step is docs/fresh-start-cut.md step (d): the initial commit."
+  echo "fresh-start-cut: next step is the runbook's step (d): the initial commit."
 }
 
 case "$mode" in

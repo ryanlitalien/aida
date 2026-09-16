@@ -12,7 +12,7 @@ Releases follow the same discipline. `main` is PR-only - nothing lands there exc
 
 Aida (`aida`) is a CLI-first "agent of agents" orchestration layer written in Go. It parses natural language questions and routes them to the right tools/sources (a SQL data warehouse, an observability backend, Notion, GitHub, local codebases) automatically, executing in parallel where possible and synthesizing grounded answers with citations.
 
-For the architecture and design rationale, see `docs/plan-open-source.md` Part 2 and `HISTORY.md` for the development timeline.
+For the architecture and design rationale, see `docs/notes/` and `docs/diagrams/`, and `HISTORY.md` for the development timeline.
 
 ## Build & Development Commands
 

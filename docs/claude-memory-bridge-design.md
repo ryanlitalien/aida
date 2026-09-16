@@ -58,7 +58,7 @@ SQLite with vector embeddings for semantic search." It already provides:
   is a derived cache, not the source of truth).
 - `aida brain garden` / `gc` - staleness auditing and garbage collection.
 - `soul.yaml` - an authored persona layer ("Who you are").
-- `~/.aida` is already git-backed with a remote (`air -> ssh://macair/~/.kevin`).
+- `~/.aida` is already git-backed with a sync remote on another machine.
 
 So the task is not "build a brain." It is "bridge the Claude edge into the Aida core and
 decide who is authoritative."
@@ -149,7 +149,7 @@ a fast sync-down rather than a rebuild.
    drift.
    **Resolved (shipped):** brain is the system of record; `~/.claude` is the capture-inbox
    + projection edge, exactly as recommended.
-2. **Backup vs sync are different.** The `air -> ssh://macair/~/.kevin` remote is a *sync
+2. **Backup vs sync are different.** The existing remote is a *sync
    peer* - a delete-and-push deletes everywhere. Real backup needs a versioned, off-LAN
    copy. Mirror the `aida-wiki` pattern (`github.com/ryanlitalien/aida-wiki`): add a
    **private GitHub remote** for the brain so there is history plus an off-machine copy.
