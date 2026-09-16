@@ -15,7 +15,7 @@
 7. **Incidental callers**: `internal/dailybriefing/` (triage/format), `internal/investigations/`, `internal/mcp/server.go`, `internal/library/` (import/scan/routes), `internal/roster/load.go` - mechanical sweeps, one commit per package.
 8. **Tests**: fix the ~70-file fallout; re-cut `testdata/golden-queries.yaml` and the in-code golden fixtures with entity-token routing instead of registry hits.
 9. **Guard**: add the removed identifiers (`partners.yaml`, `LoadPartners`, `checkout_token_patterns`, `partner_ari`) to `scripts/oss-scan.sh` so they can't creep back. Scan for those specific tokens, not the bare word "partner" (too many legitimate uses in prose).
-10. **Docs**: CLAUDE.md (routing contract step 3/4, the "Partner YAML shape" section, classifier patterns), README, `docs/plan-open-source.md` Part 2 prose. Older plan docs (`gap-analysis`, `plan-investigate`, `harness-evolution`, …) get handled by chunk B's keep/trim/move disposition table - don't sweep them here.
+10. **Docs**: CLAUDE.md (routing contract step 3/4, the "Partner YAML shape" section, classifier patterns), README. Older plan docs (`gap-analysis`, `plan-investigate`, `harness-evolution`, …) get handled by chunk B's keep/trim/move disposition table - don't sweep them here.
 
 ## Out of scope, tracked elsewhere
 
