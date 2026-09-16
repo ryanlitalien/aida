@@ -431,7 +431,7 @@ flowchart LR
     GHBRAIN["GitHub aida-brain repo"]
   end
 
-  DEVICES["edith · photon (other machines)"]
+  DEVICES["other machines"]
 
   TERM --> ENGINE
   MIC --> JARVIS
@@ -541,10 +541,10 @@ flowchart LR
     <div class="card"><span class="chip ok">shipped</span><span class="name">CI + release</span><span class="note">build/vet/test + auto minor-version goreleaser on main (task #12 is closable)</span></div>
     <div class="card"><span class="chip warn">hardening</span><span class="name">Learning loop closure</span><span class="note">brain recall not consulted during routing; memory bridge is one-way</span></div>
     <div class="card"><span class="chip warn">hardening</span><span class="name">Autonomy rails</span><span class="note">--dry-run ignored in agent mode; exec sources fire unconfirmed</span></div>
-    <div class="card"><span class="chip warn">hardening</span><span class="name">Multi-device hygiene</span><span class="note">edith + photon need reembed (#101); auto-commit vs rebase (#47)</span></div>
+    <div class="card"><span class="chip warn">hardening</span><span class="name">Multi-device hygiene</span><span class="note">the other devices need reembed (#101); auto-commit vs rebase (#47)</span></div>
     <div class="card"><span class="chip warn">hardening</span><span class="name">Voice latency</span><span class="note">no fast-path for trivial queries; whisper untuned; email search slow</span></div>
     <div class="card"><span class="chip crit">missing</span><span class="name">Observability + cost</span><span class="note">no metrics, no persistent cost ledger; OTel unwired; runs/ + audit only</span></div>
-    <div class="card"><span class="chip crit">missing</span><span class="name">Fleet awareness</span><span class="note">minty-agents / Bifrost invisible to aida; spawning story lives outside (#102)</span></div>
+    <div class="card"><span class="chip crit">missing</span><span class="name">Fleet awareness</span><span class="note">the agent fleet / Bifrost invisible to aida; spawning story lives outside (#102)</span></div>
   </div>
 </section>
 
@@ -589,9 +589,9 @@ flowchart LR
     <h3>Theme 4 · Multi-device + fleet</h3>
     <div class="tablewrap"><table>
       <tr><th>Sev</th><th>Gap</th><th>Where</th></tr>
-      <tr><td class="sev"><span class="chip warn">warn</span></td><td>edith + photon still on old embeddings; each needs <code>aida brain reembed</code></td><td class="ref">#101</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>the other devices still on old embeddings; each needs <code>aida brain reembed</code></td><td class="ref">#101</td></tr>
       <tr><td class="sev"><span class="chip warn">warn</span></td><td>Brain auto-commit hook can clobber rebase state (silent commits on detached HEAD)</td><td class="ref">#47</td></tr>
-      <tr><td class="sev"><span class="chip warn">warn</span></td><td>The minty-agents fleet + Bifrost do not exist anywhere in aida's code or sources; spawning long-lived agents is a parallel system aida cannot see or query</td><td class="ref">#102</td></tr>
+      <tr><td class="sev"><span class="chip warn">warn</span></td><td>The agent fleet + Bifrost do not exist anywhere in aida's code or sources; spawning long-lived agents is a parallel system aida cannot see or query</td><td class="ref">#102</td></tr>
     </table></div>
   </div>
 
