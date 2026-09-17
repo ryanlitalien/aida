@@ -179,13 +179,34 @@ instead of manual curation. Files are always the source of truth;
 `brain.db` is a derived index that rebuilds itself, detached, when
 stale.
 
+```
+~/.aida/runs/              L0  every query's record
+~/.aida/brain/lessons/     L1  thumbs feedback
+~/.aida/brain/memory/      L2  captured agent memories
+~/.aida/brain/knowledge/   L3  entity + domain pages
+~/dev/aida-wiki/           L4  consolidated wiki (separate repo, optional)
+```
+
 | Level | What | Written by |
 |---|---|---|
 | L0 | Run records, `--explain` traces | Every query |
 | L1 | Feedback lessons (embedded) | Thumbs up/down, voice notes |
 | L2 | Captured coding-agent memories (Claude Code, Codex, Gemini) | Capture hooks + LLM-distilled session harvests |
 | L3 | Curated entity pages, domain knowledge | Compile passes |
-| L4 | Consolidated wiki | Planned consolidation + decay scoring |
+| L4 | Consolidated wiki | `aida brain consolidate` + decay scoring |
+
+L0 through L3 all live under `~/.aida/`, written by machines as things
+happen: append-only, cheap, self-correcting through supersession. L4
+sits outside that tree on purpose. A wiki holds two things the brain
+should not - the raw archive corpora being folded in, and prose a human
+has reviewed - and material only graduates into it once a chapter stops
+changing, so a wiki page is a standing claim rather than an observation.
+The format is an [Open Knowledge Format](https://github.com/google/open-knowledge-format)
+v0.1 bundle: markdown plus YAML frontmatter, `index.md` for progressive
+disclosure, paths as identity. Point aida at yours with `wiki.path` in
+`~/.aida/config.yaml` (default `~/dev/aida-wiki`), then `aida wiki index`
+to make it a recall channel. It is entirely optional - nothing else in
+aida needs it to work.
 
 Diagram: [`docs/diagrams/memory-levels.md`](docs/diagrams/memory-levels.md).
 
