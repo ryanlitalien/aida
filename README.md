@@ -320,6 +320,10 @@ aida loop --tag <tag> --check "<cmd>"    # drive the loop with a quality gate
 aida lint                                # validate library sources
 aida index --generate                    # scan + classify sources into the library
 
+# Wiki (optional L4 - a separate OKF repo you point aida at)
+aida wiki index                          # index the wiki into brain.db for recall
+aida wiki lint                           # audit it for dead links, orphans, drift
+
 # Dispatcher + roster (named agent call-signs)
 aida ask <who> "<task>"                  # dispatch to a named roster entry
 aida roster list                         # show the configured roster
