@@ -118,8 +118,8 @@ type JobsConfig struct {
 }
 
 // WikiConfig holds settings for the personal wiki -- a separate git repo
-// of markdown pages (projects/entities/concepts) distilled from Ryan's
-// archives, distinct from the brain's lessons/memory/tasks. See
+// of markdown pages (projects/entities/concepts) distilled from a user's
+// own archives, distinct from the brain's lessons/memory/tasks. See
 // internal/brain/wiki_index.go for the indexing pipeline and
 // internal/cli/wiki_lint.go for the lint tool.
 type WikiConfig struct {
