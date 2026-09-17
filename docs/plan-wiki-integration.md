@@ -1,10 +1,10 @@
-# Plan: Super-Ryan-Wiki - Aida Integration (consolidation, decay scoring, wiki commands)
+# Plan: wiki integration (consolidation, decay scoring, wiki commands)
 
-**Branch**: `feat/super-ryan-wiki` · **Wiki repo**: [ryanlitalien/aida-wiki](https://github.com/ryanlitalien/aida-wiki) (private; roadmap in its `plan.md`)
+**Status**: shipped. All three phases landed - `aida brain consolidate` (`internal/brain/consolidate.go`), decay + use-count scoring (`internal/brain/search_multi.go`), and the `aida wiki` command group with its recall channel (`internal/cli/wiki.go`, `internal/brain/wiki_index.go`). Kept as a record of the design and its sources.
 
 ## Context
 
-Ryan's archives are being folded into an LLM-maintained wiki (`~/dev/aida-wiki`, OKF v0.1 bundle) with aida on top. This plan covers the Go side - three phases distilled from a review of Elastic Atlas (consolidation/decay/supersession), the Obsidian Karpathy-wiki plugin (lint taxonomy, aliases), and Google OKF (format). The wiki-side conventions and triage/synthesis workflows live in the aida-wiki repo.
+A personal archive folded into an LLM-maintained wiki (an OKF v0.1 bundle, located by `wiki.path`, default `~/dev/aida-wiki`) with aida on top. This plan covers the Go side - three phases distilled from a review of Elastic Atlas (consolidation/decay/supersession), the Obsidian Karpathy-wiki plugin (lint taxonomy, aliases), and Google OKF (format). The wiki-side conventions and triage/synthesis workflows live in the wiki repo itself, not here.
 
 Design constraints honored: files are the source of truth, brain.db is derived; LLM at edges, deterministic middle; granular commits, never squash.
 
@@ -58,7 +58,7 @@ Recency/frequency signals in multi-channel recall (Atlas pattern).
    - `orphan-page` - no inbound links and absent from index.md
    - `empty-page` - body under threshold
    - `missing-aliases` - pages without ≥1 alias
-   - `dup-slug` - **casefold-duplicate slugs** (APFS lesson from the evernotes collision repair)
+   - `dup-slug` - **casefold-duplicate slugs** (APFS lesson: a case-insensitive filesystem silently collides two slugs)
    - `frontmatter` - missing `type`/`title`, invalid `wiki_status`, synthesized pages with no `sources` citations
 4. **`aida wiki index`**: walk `wiki/*.md` + `triaged_keep` source notes → `EmbedDocuments` (embeddings.go:57, batches at 128) → new `wiki_pages` table (slug, title, path, body, embedding BLOB, indexed_at) + FTS rows (`upsertCorpusFTS("wiki:<slug>", "wiki:page", body)` per memory_types.go:210-214 pattern). Incremental: re-embed only files whose mtime > indexed_at.
 5. **5th recall channel**: `ChannelWiki` in `SearchMulti` - vector + FTS hits over `wiki:` docs added to `rankings` before `rrfFuse` (:153). The file header (:16-20) documents this exact extension point ("no other call sites change"). `hydrateMultiResult` (:195) learns the `wiki:` prefix → agent's RELEVANT MEMORY block (cli/agent.go:394-408) starts surfacing wiki pages with zero prompt changes.
@@ -67,7 +67,7 @@ Recency/frequency signals in multi-channel recall (Atlas pattern).
 ## Ordering & sizing
 
 - A and B both touch the `memory_records` migration → land the migration as its own first commit, then A and B independently on top.
-- C is independent of A/B (depends only on the wiki repo existing - done, Phase 0 shipped 2026-07-03).
+- C is independent of A/B (depends only on a wiki repo existing).
 - Rough sizes: A ≈ 400 LOC + tests · B ≈ 150 · C ≈ 500.
 
 ## Verification

@@ -112,9 +112,17 @@ directory as a local git repo automatically, and commits to it after
 every query, so version history and point-in-time recovery are already
 happening locally with zero setup.
 
-To back up or sync either directory across machines, treat them like
-dotfiles: create a **private** repository for each and add it as a
-remote.
+If you keep a wiki (the optional L4 tier - see the README's memory
+section), that's a third directory of the same kind: `wiki.path` in
+`~/.aida/config.yaml`, default `~/dev/aida-wiki`.
+
+To back up or sync any of them across machines, treat them like
+dotfiles. A **private** git repository per directory is the lowest
+friction route, and the one aida assists with - it gives you history
+and point-in-time recovery, and `aida init` can set the remotes for
+you. But nothing here requires git: these are plain directories of
+plain files, so an rsync to a local server or NAS, a Time Machine
+target, or whatever backup you already run works just as well.
 
 ```bash
 # Config
@@ -123,6 +131,10 @@ git add -A && git commit -m "initial config" && git push -u origin main
 
 # Brain (already a local git repo - aida init did this for you)
 cd ~/.aida/brain && git remote add origin <your-private-brain-repo>
+git push -u origin main
+
+# Wiki (optional - only if you use L4)
+cd ~/dev/aida-wiki && git remote add origin <your-private-wiki-repo>
 git push -u origin main
 ```
 
@@ -134,4 +146,5 @@ aida init --config-remote <your-private-config-repo> --brain-remote <your-privat
 
 Either way: **private**, not public. There is no scrub pass that makes
 a brain directory safe to publish - it is, by design, a record of
-whatever you've said to it.
+whatever you've said to it, and a wiki built from your own archives is
+the same kind of material.

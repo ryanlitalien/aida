@@ -11,22 +11,24 @@ import (
 	"github.com/ryanlitalien/aida/internal/ui"
 )
 
-// newWikiCmd builds the `aida wiki` command group -- tools for Ryan's
-// personal wiki (a separate git repo at ~/dev/aida-wiki, an OKF v0.1
-// bundle of projects/entities/concepts pages distilled from his
-// archives). Distinct from the brain's lessons/memory/tasks, which live
+// newWikiCmd builds the `aida wiki` command group -- tools for the
+// optional personal wiki: a separate git repo, located by `wiki.path`
+// in config.yaml (default ~/dev/aida-wiki), holding an OKF v0.1 bundle
+// of projects/entities/concepts pages distilled from a user's own
+// archives. Distinct from the brain's lessons/memory/tasks, which live
 // in ~/.aida/brain. Subcommand-per-file, mirroring newBrainCmd's
 // convention (brain.go, brain_garden.go).
 func newWikiCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wiki",
-		Short: "Tools for the personal wiki (~/dev/aida-wiki)",
+		Short: "Tools for the personal wiki (wiki.path, default ~/dev/aida-wiki)",
 		Long: "The wiki is a separate git repo of markdown pages (projects/\n" +
-			"entities/concepts) distilled from Ryan's archives -- files are\n" +
-			"the source of truth, same design constraint as the brain. `aida\n" +
-			"wiki index` derives a searchable copy into brain.db (the wiki:\n" +
-			"recall channel in SearchMulti); `aida wiki lint` audits the repo\n" +
-			"for drift.",
+			"entities/concepts) distilled from your own archives -- files\n" +
+			"are the source of truth, same design constraint as the brain.\n" +
+			"Its location comes from `wiki.path` in ~/.aida/config.yaml,\n" +
+			"defaulting to ~/dev/aida-wiki. `aida wiki index` derives a\n" +
+			"searchable copy into brain.db (the wiki: recall channel in\n" +
+			"SearchMulti); `aida wiki lint` audits the repo for drift.",
 	}
 
 	cmd.AddCommand(newWikiLintCmd())

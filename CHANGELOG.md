@@ -6,6 +6,12 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.7.0
+
+- Documented the memory stack's L4 tier, which the docs had reduced to one table row reading "Planned": the README's memory section now shows a path per tier, corrects the L4 row (the consolidation pass shipped as `aida brain consolidate`), and explains why the wiki is a separate repo rather than another directory under `~/.aida/brain/` - it carries raw archive corpora and human-reviewed prose, and material graduates into it only once it stops changing - along with the OKF v0.1 format, the `wiki.path` config key, and the `aida wiki index` / `aida wiki lint` commands, which the Commands block had never listed.
+- INSTALL.md's backup section now covers the wiki as a third optional directory and says plainly that a private git remote is the lowest-friction route rather than a requirement: an rsync to a local server or NAS, or a Time Machine target, backs up a directory of plain files just as well. The privacy warning extends to the wiki, which holds the same class of material as the brain.
+- `aida wiki --help` now names the `wiki.path` config key instead of presenting its default as the path, and the wiki plan doc is scrubbed of owner-specific references and renamed to `docs/plan-wiki-integration.md`. Help strings and comments only; no behavior change.
+
 ## v1.6.0
 
 - Roster `subagent` entries can now pin the Claude model their `claude --print` transport runs on via a new `subagent.model` field, passed through verbatim as `--model <value>` (an alias like `sonnet`/`opus`/`haiku`/`fable`, or a full model id), so cheap reporting personas can run on a lighter model instead of inheriting Claude Code's configured default; leaving it unset keeps the old inherit-the-default behavior.
