@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.8.0
+
+- Removed the last references to a specific third-party Claude Code hook manager from the repo. The additive-merge behavior is unchanged - `aida setup` still merges its harvest hooks into `~/.codex/hooks.json` and `~/.gemini/settings.json` so anything another tool already wrote survives byte-for-byte, and still refuses to write `~/.claude/settings.json` at all - but the comments, docs, and test fixtures now describe that tool generically instead of by name, and the merge tests simulate a fictional "othertool" rather than a real product.
+
 ## v1.7.0
 
 - Documented the memory stack's L4 tier, which the docs had reduced to one table row reading "Planned": the README's memory section now shows a path per tier, corrects the L4 row (the consolidation pass shipped as `aida brain consolidate`), and explains why the wiki is a separate repo rather than another directory under `~/.aida/brain/` - it carries raw archive corpora and human-reviewed prose, and material graduates into it only once it stops changing - along with the OKF v0.1 format, the `wiki.path` config key, and the `aida wiki index` / `aida wiki lint` commands, which the Commands block had never listed.

@@ -165,7 +165,7 @@ exit 0
 }
 ```
 
-(There is already a `PostToolUse` `matcher:"*"` supacode notify hook; this is an
+(There is already a `PostToolUse` `matcher:"*"` third-party notify hook; this is an
 additional entry, not a replacement. Hooks with different matchers coexist.)
 
 ### New CLI verb: `aida brain remember`
@@ -288,7 +288,7 @@ one search enhancement the recall side needs.
   `settings.local.json`, tokens, or caches (design doc tier 3).
 - **Supersession = no churn.** Same-key instruction/fact writes supersede; the
   git repo sees one active record per memory, not a growing pile.
-- **jq dependency.** These use `jq` for clarity; the existing supacode hooks use
+- **jq dependency.** These use `jq` for clarity; the existing third-party hooks use
   awk to avoid it. If jq is not guaranteed on every machine, port the field
   extraction to the same awk helper.
 
