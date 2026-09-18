@@ -166,7 +166,7 @@ const captureHookSettingsSnippet = `{
 
 // printCaptureHookSettingsNote reports whether ~/.claude/settings.json
 // already wires up the capture hook and, if not, prints the JSON snippet
-// to merge in. settings.json is large and externally managed (supacode),
+// to merge in. settings.json is large and externally managed,
 // so aida never writes to it -- this is detect-and-instruct only, and is
 // deliberately best-effort: an absent or unparseable file just gets the
 // snippet printed, never an error.

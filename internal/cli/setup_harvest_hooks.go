@@ -69,7 +69,7 @@ func installHookScript(destPath, content string) (installed bool, err error) {
 // hook-group array completely untouched. Safe to run against a large,
 // externally-managed config file that carries hooks this command did
 // not install (e.g. Codex's hooks.json and Gemini's settings.json both
-// carry supacode-managed entries that must survive byte-for-byte in
+// carry third-party-managed entries that must survive byte-for-byte in
 // substance, even though the surrounding JSON gets re-serialized).
 //
 // Idempotent: a no-op (installed=false, data returned unchanged) when a
@@ -125,7 +125,7 @@ func commandHookGroup(scriptPath string) json.RawMessage {
 
 // wireCodexHarvestHook installs ~/.aida/hooks/harvest-codex.sh and
 // wires it into ~/.codex/hooks.json's Stop event, additively -- Codex's
-// own supacode-managed Stop hooks are preserved untouched. A no-op
+// own third-party-managed Stop hooks are preserved untouched. A no-op
 // (not an error) when ~/.codex doesn't exist, since Codex may simply
 // not be installed on this machine.
 func wireCodexHarvestHook(home string) error {

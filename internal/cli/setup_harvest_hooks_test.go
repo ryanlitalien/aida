@@ -9,28 +9,28 @@ import (
 )
 
 // codexHooksFixture mirrors the real ~/.codex/hooks.json shape on a
-// machine running supacode: SessionStart/Stop/UserPromptSubmit each
-// carry supacode-managed hook-groups (a notify.sh command plus an awk
-// one-liner with heavily escaped quotes) that a merge must never lose
-// or corrupt.
+// machine running another hook-managing tool: SessionStart/Stop/
+// UserPromptSubmit each carry othertool-managed hook-groups (a
+// notify.sh command plus an awk one-liner with heavily escaped quotes)
+// that a merge must never lose or corrupt.
 const codexHooksFixture = `{
   "hooks": {
     "SessionStart": [
-      { "hooks": [ { "command": "/Users/fakehome/.superset/hooks/notify.sh", "type": "command" } ] }
+      { "hooks": [ { "command": "/Users/fakehome/.othertool/hooks/notify.sh", "type": "command" } ] }
     ],
     "Stop": [
-      { "hooks": [ { "command": "/Users/fakehome/.superset/hooks/notify.sh", "type": "command" } ] },
-      { "hooks": [ { "command": "[ -n \"${SUPACODE_SURFACE_ID:-}\" ] && printf 'x=\\\"y\\\"' # supacode-managed-hook", "timeout": 10, "type": "command" } ] }
+      { "hooks": [ { "command": "/Users/fakehome/.othertool/hooks/notify.sh", "type": "command" } ] },
+      { "hooks": [ { "command": "[ -n \"${OTHERTOOL_SURFACE_ID:-}\" ] && printf 'x=\\\"y\\\"' # othertool-managed-hook", "timeout": 10, "type": "command" } ] }
     ],
     "UserPromptSubmit": [
-      { "hooks": [ { "command": "/Users/fakehome/.superset/hooks/notify.sh", "type": "command" } ] }
+      { "hooks": [ { "command": "/Users/fakehome/.othertool/hooks/notify.sh", "type": "command" } ] }
     ]
   }
 }`
 
 // geminiSettingsFixture mirrors the real ~/.gemini/settings.json shape:
 // non-hook top-level keys (security, general) plus BeforeAgent/
-// AfterAgent/AfterTool hook events, all pointing at a supacode script.
+// AfterAgent/AfterTool hook events, all pointing at an othertool script.
 const geminiSettingsFixture = `{
   "security": {
     "auth": {
@@ -42,13 +42,13 @@ const geminiSettingsFixture = `{
   },
   "hooks": {
     "BeforeAgent": [
-      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.superset/hooks/gemini-hook.sh" } ] }
+      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.othertool/hooks/gemini-hook.sh" } ] }
     ],
     "AfterAgent": [
-      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.superset/hooks/gemini-hook.sh" } ] }
+      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.othertool/hooks/gemini-hook.sh" } ] }
     ],
     "AfterTool": [
-      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.superset/hooks/gemini-hook.sh" } ] }
+      { "hooks": [ { "type": "command", "command": "/Users/fakehome/.othertool/hooks/gemini-hook.sh" } ] }
     ]
   }
 }`
@@ -79,15 +79,15 @@ func TestMergeAdditiveHook_CodexAppendsToStopPreservesEverythingElse(t *testing.
 		t.Errorf("UserPromptSubmit should be untouched, got %d entries", len(got.Hooks["UserPromptSubmit"]))
 	}
 
-	// The supacode notify.sh entry and the gnarly awk one-liner must
+	// The othertool notify.sh entry and the gnarly awk one-liner must
 	// both survive byte-for-byte in substance (still contain their
 	// original command strings after the round trip).
 	full := string(out)
-	if !strings.Contains(full, "/Users/fakehome/.superset/hooks/notify.sh") {
-		t.Error("supacode notify.sh command was lost in the merge")
+	if !strings.Contains(full, "/Users/fakehome/.othertool/hooks/notify.sh") {
+		t.Error("othertool notify.sh command was lost in the merge")
 	}
-	if !strings.Contains(full, "supacode-managed-hook") {
-		t.Error("supacode-managed-hook awk one-liner was lost in the merge")
+	if !strings.Contains(full, "othertool-managed-hook") {
+		t.Error("othertool-managed-hook awk one-liner was lost in the merge")
 	}
 	if !strings.Contains(full, "/x/harvest-codex.sh") {
 		t.Error("new harvest hook command missing from merged output")
@@ -231,8 +231,8 @@ func TestWireCodexHarvestHook_FullFlow(t *testing.T) {
 	if !strings.Contains(string(data), "harvest-codex.sh") {
 		t.Error("hooks.json does not reference the harvest script")
 	}
-	if !strings.Contains(string(data), "supacode-managed-hook") {
-		t.Error("hooks.json lost the pre-existing supacode hook")
+	if !strings.Contains(string(data), "othertool-managed-hook") {
+		t.Error("hooks.json lost the pre-existing othertool hook")
 	}
 
 	// Idempotent: running again does not duplicate the entry.
@@ -292,8 +292,8 @@ func TestWireGeminiHarvestHook_FullFlow(t *testing.T) {
 	if !strings.Contains(string(data), "oauth-personal") {
 		t.Error("settings.json lost the pre-existing security block")
 	}
-	if !strings.Contains(string(data), "/Users/fakehome/.superset/hooks/gemini-hook.sh") {
-		t.Error("settings.json lost the pre-existing supacode gemini-hook.sh entries")
+	if !strings.Contains(string(data), "/Users/fakehome/.othertool/hooks/gemini-hook.sh") {
+		t.Error("settings.json lost the pre-existing othertool gemini-hook.sh entries")
 	}
 
 	if err := wireGeminiHarvestHook(home); err != nil {
