@@ -52,7 +52,7 @@ type loopOpts struct {
 	reviewer      string        // GitHub handle to request review from on the PR
 	base          string        // PR base branch (default main)
 	reviewPanel   int           // adversarial reviewer agents to run before opening a PR
-	worktree      bool          // run each task in an isolated worktree off origin/main
+	worktree      bool          // run each task in an isolated worktree off the base branch's upstream
 	concurrency   int           // work up to N tasks in parallel (requires worktree)
 	maxBudgetUSD  float64       // stop once accumulated agent cost exceeds this (0 = config/unlimited)
 	maxConsecFail int           // circuit breaker: stop after N consecutive holds (0 = unlimited)
@@ -66,6 +66,17 @@ type loopOpts struct {
 
 	sbxTier      sandbox.Tier // resolved tier (after availability fallback); set in runLoop
 	linuxAidaBin string       // path to a linux/arm64 aida build, provisioned into the docker sandbox; set in runLoop
+	baseRemote   string       // remote the base branch tracks (e.g. "public"); set once by resolveBase
+	baseRef      string       // remote-tracking ref worktrees are cut from and diffed against (e.g. "public/main"); set once by resolveBase
+}
+
+// resolveBase resolves, once per loop run, which remote and remote-tracking
+// ref the --base branch lives on (worktree.ResolveUpstream), so worktree
+// creation, the PR push, and the review-panel diff all read the same answer
+// and cannot drift back to a hardcoded "origin". Only needed when worktrees
+// are in play (--worktree, or --pr which implies it).
+func (o *loopOpts) resolveBase(repoRoot string) {
+	o.baseRemote, o.baseRef = worktree.ResolveUpstream(repoRoot, orDefault(o.base, "main"))
 }
 
 // defaultLoopOpts returns the canonical loop defaults. newLoopCmd seeds from
@@ -131,7 +142,7 @@ func newLoopCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&o.checks, "check", nil, "quality-gate command run after each attempt; must exit 0 (repeatable, e.g. --check \"make build\" --check \"make test\")")
 	cmd.Flags().IntVar(&o.maxFix, "max-fix-iterations", 3, "max fix attempts per task before parking it on hold")
 	cmd.Flags().BoolVar(&o.commit, "commit", false, "commit the working tree after a passing iteration")
-	cmd.Flags().BoolVar(&o.worktree, "worktree", false, "run each task in an isolated git worktree branched off origin/main (auto/<id>-<slug>)")
+	cmd.Flags().BoolVar(&o.worktree, "worktree", false, "run each task in an isolated git worktree branched off the base branch's upstream (auto/<id>-<slug>)")
 	cmd.Flags().BoolVar(&o.pr, "pr", false, "open a PR per passing task and tag a reviewer (implies --worktree; never merges)")
 	cmd.Flags().StringVar(&o.reviewer, "reviewer", "", "GitHub handle to request review from on the PR (--pr)")
 	cmd.Flags().StringVar(&o.base, "base", "main", "base branch for PRs (--pr)")
@@ -194,6 +205,17 @@ func runLoopCtx(ctx context.Context, o loopOpts) error {
 		o.worktree = true
 	}
 
+	// Resolve the base branch's upstream once, up front, from the repo the
+	// loop runs in. Every worktree this run cuts, every PR push, and every
+	// review-panel diff uses this one answer.
+	if o.worktree {
+		repoRoot, rerr := worktree.RepoRoot(".")
+		if rerr != nil {
+			return fmt.Errorf("--worktree requires running inside a git repository: %w", rerr)
+		}
+		o.resolveBase(repoRoot)
+	}
+
 	conc := o.concurrency
 	if conc < 1 {
 		conc = 1
@@ -231,6 +253,9 @@ func runLoopCtx(ctx context.Context, o loopOpts) error {
 
 	fmt.Printf("aida loop - profile=%s tags=%v max=%d checks=%v max-fix=%d worktree=%v concurrency=%d budget=$%.2f daemon=%v\n",
 		profileName, o.tags, o.maxIterations, o.checks, o.maxFix, o.worktree, conc, budget, o.daemon)
+	if o.worktree {
+		fmt.Printf("worktrees: cut from %s (base branch %s)\n", o.baseRef, orDefault(o.base, "main"))
+	}
 
 	// Round model: each round picks up to `conc` tasks and works them (in
 	// parallel when conc>1), with a barrier between rounds so task selection
@@ -378,7 +403,7 @@ func (o loopOpts) processTask(ctx context.Context, brn *brain.Brain, store *jobs
 		ui.PrintVerbose("loop", "set in-progress failed: "+err.Error())
 	}
 
-	// Optional per-task worktree isolation off origin/main. The branch
+	// Optional per-task worktree isolation off the resolved base ref. The branch
 	// (auto/<id>-<slug>) and any commit-on-pass survive teardown so Phase 3
 	// can push it; the working directory is always removed. We do NOT stash
 	// the path on the job manifest - the loop owns cleanup, and letting the
@@ -387,7 +412,7 @@ func (o loopOpts) processTask(ctx context.Context, brn *brain.Brain, store *jobs
 	workDir := ""
 	var wt *worktree.Worktree
 	if o.worktree {
-		w, err := setupTaskWorktree(profileName, task)
+		w, err := o.setupTaskWorktree(profileName, task)
 		if err != nil {
 			fmt.Printf("  ✗ worktree setup failed: %s - parking on hold\n", err)
 			parkHold(brn, task)
@@ -481,7 +506,7 @@ func (o loopOpts) processTask(ctx context.Context, brn *brain.Brain, store *jobs
 			parkHold(brn, task)
 			return
 		}
-		prURL, err := openTaskPR(workDir, wt.Branch, task, o.reviewer, o.base)
+		prURL, err := openTaskPR(workDir, wt.Branch, task, o.reviewer, o.base, o.baseRemote)
 		if err != nil {
 			fmt.Printf("  ✗ open PR failed: %s - parking on hold\n", err)
 			parkHold(brn, task)
@@ -522,13 +547,17 @@ func parkHold(brn *brain.Brain, task *brain.TaskRecord) {
 	}
 }
 
-// setupTaskWorktree creates a fresh worktree off origin/main for a task,
-// clearing any stale branch/dir from a prior crashed run first. The branch is
-// auto/<id>-<slug> so Phase 3 can push it as the task's PR branch.
-func setupTaskWorktree(profileName string, task *brain.TaskRecord) (*worktree.Worktree, error) {
+// setupTaskWorktree creates a fresh worktree off the resolved base ref
+// (o.baseRef, e.g. public/main) for a task, clearing any stale branch/dir from
+// a prior crashed run first. The branch is auto/<id>-<slug> so Phase 3 can push
+// it as the task's PR branch.
+func (o loopOpts) setupTaskWorktree(profileName string, task *brain.TaskRecord) (*worktree.Worktree, error) {
 	repoRoot, err := worktree.RepoRoot(".")
 	if err != nil {
 		return nil, err
+	}
+	if o.baseRef == "" {
+		return nil, fmt.Errorf("base ref not resolved (resolveBase must run before worktrees are cut)")
 	}
 	label := fmt.Sprintf("loop-%d-%s", task.TaskID, sanitizeLabel(task.Slug))
 	branch := "auto/" + label
@@ -536,7 +565,7 @@ func setupTaskWorktree(profileName string, task *brain.TaskRecord) (*worktree.Wo
 	// Clear stale state from a previous crashed run of the same task.
 	_ = worktree.Remove(repoRoot, dest)
 	worktree.DeleteBranch(repoRoot, branch)
-	return worktree.Create(repoRoot, dest, "origin/main", branch)
+	return worktree.Create(repoRoot, dest, o.baseRef, branch)
 }
 
 // sanitizeLabel keeps a slug filesystem- and branch-safe (lowercase

@@ -4,7 +4,8 @@
 // worktrees without importing the voice-tools package.
 //
 // The model: each unit of autonomous work runs in its own worktree branched
-// off a base ref (origin/main for new work), so concurrent tasks never collide
+// off a base ref (the base branch's upstream, e.g. public/main, for new work),
+// so concurrent tasks never collide
 // in a shared working tree and a failed attempt can be discarded by deleting a
 // directory. The branch (and any commits on it) survive worktree removal, which
 // is what lets Phase 3 push a branch and open a PR after the worktree is gone.
@@ -41,10 +42,13 @@ func RepoRoot(cwd string) (string, error) {
 //     out in the worktree.
 //   - branch == "": the worktree is detached at baseRef.
 //
-// baseRef "" defaults to the repo's current HEAD. When baseRef names an
-// origin/ ref, origin is fetched first (best-effort) so the branch is cut from
-// the latest remote tip rather than a stale local copy - the plan's "branch off
-// origin/main" requirement that keeps autonomous PRs free of stray commits.
+// baseRef "" defaults to the repo's current HEAD. When baseRef's first path
+// segment names a configured remote (public/main, origin/main, upstream/x),
+// that remote's branch is fetched first (best-effort) so the branch is cut
+// from the latest remote tip rather than a stale local copy - the plan's
+// "branch off the base branch's upstream" requirement that keeps autonomous
+// PRs free of stray commits. Any other ref (a local branch, tag, or SHA) is
+// used as-is.
 //
 // The parent directory of dest is created if needed.
 func Create(repoRoot, dest, baseRef, branch string) (*Worktree, error) {
@@ -57,11 +61,11 @@ func Create(repoRoot, dest, baseRef, branch string) (*Worktree, error) {
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return nil, fmt.Errorf("mkdir worktree parent: %w", err)
 	}
-	if strings.HasPrefix(baseRef, "origin/") {
-		remoteBranch := strings.TrimPrefix(baseRef, "origin/")
+	if remote := remoteOfRef(repoRoot, baseRef); remote != "" {
+		remoteBranch := strings.TrimPrefix(baseRef, remote+"/")
 		// Best-effort: an offline fetch failure falls back to whatever
-		// origin/<branch> ref we already have locally.
-		_ = exec.Command("git", "-C", repoRoot, "fetch", "origin", remoteBranch).Run()
+		// <remote>/<branch> ref we already have locally.
+		_ = exec.Command("git", "-C", repoRoot, "fetch", remote, remoteBranch).Run()
 	}
 	args := []string{"-C", repoRoot, "worktree", "add"}
 	if branch != "" {
