@@ -336,3 +336,49 @@ func TestSearchMulti_InstructionsExemptFromDecay(t *testing.T) {
 		t.Errorf("undecayed ancient instruction should outrank decayed ancient fact; top = %q", results[0].DocID)
 	}
 }
+
+func TestSearchMulti_KnowledgePageSurfacedViaFTS(t *testing.T) {
+	b := newTestBrain(t)
+	ctx := context.Background()
+
+	// Knowledge-domain pages are indexed by IndexKnowledgeDomains (aida
+	// brain index; knowledge_index.go). No embedding here, mirroring an
+	// index run with no VOYAGE_API_KEY, so the page must be reachable
+	// purely through the FTS channel via its "knowledge:<slug>" row in
+	// the shared corpus_fts table.
+	slug := "acme-widgets"
+	if err := b.DB.UpsertKnowledgePage(
+		slug, "Acme Widgets Ltd", "knowledge/domains/acme-widgets.md",
+		"Acme Widgets is the fictional supplier standing in for a real vendor.",
+		nil, "2026-09-18T00:00:00Z",
+	); err != nil {
+		t.Fatalf("UpsertKnowledgePage: %v", err)
+	}
+
+	got, err := b.SearchMulti(ctx, "which supplier is the fictional vendor", nil, 10)
+	if err != nil {
+		t.Fatalf("SearchMulti: %v", err)
+	}
+	var hit *MultiResult
+	for i := range got {
+		if got[i].DocID == "knowledge:"+slug {
+			hit = &got[i]
+			break
+		}
+	}
+	if hit == nil {
+		t.Fatalf("expected knowledge:%s among results, got %+v", slug, got)
+	}
+	if _, ok := hit.Channels[ChannelFTS]; !ok {
+		t.Errorf("expected the page to be found via the fts channel, got channels %+v", hit.Channels)
+	}
+	if hit.DocType != KnowledgeDocType {
+		t.Errorf("DocType = %q, want %q", hit.DocType, KnowledgeDocType)
+	}
+	if !strings.Contains(hit.Body, "Acme Widgets") || !strings.Contains(hit.Body, "fictional supplier") {
+		t.Errorf("hydrated body lost title/snippet: %q", hit.Body)
+	}
+	if hit.Created != "2026-09-18T00:00:00Z" {
+		t.Errorf("Created = %q, want indexed_at as the decay anchor", hit.Created)
+	}
+}

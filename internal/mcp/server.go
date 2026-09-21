@@ -272,7 +272,7 @@ func (s *Server) toolsList() toolsListResult {
 		Tools: []toolDef{
 			{
 				Name:        "brain_search",
-				Description: "Semantic search against the Aida brain knowledge base. Returns similar past lessons, entity pages, and routing wisdom.",
+				Description: "Semantic search against the Aida brain knowledge base. Returns similar past lessons, entity pages, curated knowledge pages (brain/knowledge/domains: source profiles and hand-written domain notes), and routing wisdom.",
 				InputSchema: inputSchema{
 					Type: "object",
 					Properties: map[string]propDef{
@@ -500,6 +500,12 @@ func (s *Server) dispatchLocal(params toolCallParams) toolResult {
 			fmt.Fprintf(&out, "\n## Entity Pages (%d)\n\n", len(sc.EntityPages))
 			for _, ep := range sc.EntityPages {
 				fmt.Fprintf(&out, "### %s\n%s\n\n", ep.Entity.Name, ep.Content)
+			}
+		}
+		if len(sc.KnowledgePages) > 0 {
+			fmt.Fprintf(&out, "\n## Knowledge Pages (%d)\n\n", len(sc.KnowledgePages))
+			for _, kp := range sc.KnowledgePages {
+				fmt.Fprintf(&out, "### %s (%s)\n%s\n\n", kp.Title, kp.Path, strings.TrimSpace(kp.Body))
 			}
 		}
 		if sc.RoutingWisdom != "" {

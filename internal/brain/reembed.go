@@ -50,6 +50,7 @@ var reembedTables = []reembedSpec{
 	{table: "entities", idCol: "slug", textExpr: "summary", embedCol: "summary_embedding"},
 	{table: "memory_records", idCol: "id", textExpr: "body", embedCol: "body_embedding"},
 	{table: "wiki_pages", idCol: "slug", textExpr: "title || char(10) || body", embedCol: "embedding"},
+	{table: "knowledge_pages", idCol: "slug", textExpr: "title || char(10) || body", embedCol: "embedding"},
 	{table: "jarvis_lessons", idCol: "id", textExpr: "query", embedCol: "query_embedding"},
 	{table: "run_cache", idCol: "id", textExpr: "question", embedCol: "question_embedding"},
 }

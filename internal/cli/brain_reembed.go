@@ -25,7 +25,7 @@ func newBrainReembedCmd() *cobra.Command {
 		Short: "Re-embed every stored vector with the currently configured model",
 		Long: "Re-embeds and OVERWRITES every row's vector in every embedded brain.db\n" +
 			"table (lessons, routing_rules, entities, memory_records, wiki_pages,\n" +
-			"jarvis_lessons, run_cache), not just rows missing an embedding.\n\n" +
+			"knowledge_pages, jarvis_lessons, run_cache), not just rows missing an embedding.\n\n" +
 			"Run this after bumping the embedding model or output dimension\n" +
 			"(internal/brain/embeddings.go) - old and new model vectors are not\n" +
 			"comparable even at the same dimension, so a partial re-embed leaves\n" +

@@ -73,6 +73,10 @@ func newReembedTestBrain(t *testing.T) *Brain {
 		"Pine Hollow Campground body text.", staleVector(), "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"); err != nil {
 		t.Fatalf("seed wiki page: %v", err)
 	}
+	if err := db.UpsertKnowledgePage("its-llc", "ITS", "knowledge/domains/its-llc.md",
+		"ITS is the consulting LLC.", staleVector(), "2026-01-01T00:00:00Z"); err != nil {
+		t.Fatalf("seed knowledge page: %v", err)
+	}
 	if err := db.InsertJarvisLesson(&JarvisLesson{
 		ID: "jl-1", Timestamp: "2026-01-01T00:00:00Z", Profile: "work",
 		RatedTurnStartedAt: "2026-01-01T00:00:00Z", Query: "what's the weather",
@@ -117,13 +121,14 @@ func TestReembedAllOverwritesEveryTable(t *testing.T) {
 	}
 
 	want := map[string]struct{ rows, updated int }{
-		"lessons":        {1, 1},
-		"routing_rules":  {0, 0},
-		"entities":       {1, 1},
-		"memory_records": {1, 1},
-		"wiki_pages":     {1, 1},
-		"jarvis_lessons": {1, 1},
-		"run_cache":      {1, 1},
+		"lessons":         {1, 1},
+		"routing_rules":   {0, 0},
+		"entities":        {1, 1},
+		"memory_records":  {1, 1},
+		"wiki_pages":      {1, 1},
+		"knowledge_pages": {1, 1},
+		"jarvis_lessons":  {1, 1},
+		"run_cache":       {1, 1},
 	}
 	for _, tr := range result.Tables {
 		w, ok := want[tr.Table]
@@ -135,11 +140,11 @@ func TestReembedAllOverwritesEveryTable(t *testing.T) {
 			t.Errorf("table %s: Rows=%d Updated=%d, want Rows=%d Updated=%d", tr.Table, tr.Rows, tr.Updated, w.rows, w.updated)
 		}
 	}
-	if got := result.TotalRows(); got != 6 {
-		t.Errorf("TotalRows() = %d, want 6", got)
+	if got := result.TotalRows(); got != 7 {
+		t.Errorf("TotalRows() = %d, want 7", got)
 	}
-	if got := result.TotalUpdated(); got != 6 {
-		t.Errorf("TotalUpdated() = %d, want 6", got)
+	if got := result.TotalUpdated(); got != 7 {
+		t.Errorf("TotalUpdated() = %d, want 7", got)
 	}
 
 	// Every seeded row's embedding actually changed from the stale marker.
@@ -148,6 +153,7 @@ func TestReembedAllOverwritesEveryTable(t *testing.T) {
 		{"entities", "slug", "pine-hollow", "summary_embedding"},
 		{"memory_records", "id", "mem-1", "body_embedding"},
 		{"wiki_pages", "slug", "wiki-1", "embedding"},
+		{"knowledge_pages", "slug", "its-llc", "embedding"},
 		{"jarvis_lessons", "id", "jl-1", "query_embedding"},
 		{"run_cache", "id", "rc-1", "question_embedding"},
 	}
@@ -170,8 +176,8 @@ func TestReembedAllDryRunDoesNotWriteOrCallEmbed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reembedAll dry-run: %v", err)
 	}
-	if got := result.TotalRows(); got != 6 {
-		t.Errorf("TotalRows() = %d, want 6", got)
+	if got := result.TotalRows(); got != 7 {
+		t.Errorf("TotalRows() = %d, want 7", got)
 	}
 	if got := result.TotalUpdated(); got != 0 {
 		t.Errorf("TotalUpdated() = %d, want 0 on dry-run", got)
