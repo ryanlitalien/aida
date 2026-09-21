@@ -68,10 +68,10 @@ Store `quality`, `has_data`, and `reason` on the Lesson struct. The router promp
 
 ```
 - "what did i eat today" -> workouts [1 ok] (quality: 4/5 ✓) (similarity 0.87)
-- "what did i eat today" -> butter-stack [1 ok] (quality: 1/5 ✗ useless answer) (similarity 0.87)
+- "what did i eat today" -> acme-widgets [1 ok] (quality: 1/5 ✗ useless answer) (similarity 0.87)
 ```
 
-This gives the LLM router a GRADIENT rather than binary signal. A quality-4 lesson from workouts beats a quality-1 lesson from butter-stack even though both show "1 ok" status.
+This gives the LLM router a GRADIENT rather than binary signal. A quality-4 lesson from workouts beats a quality-1 lesson from acme-widgets even though both show "1 ok" status.
 
 **Files to modify:**
 - `internal/lessons/lessons.go` - add `Quality int`, `HasData bool`, `QualityReason string` to Lesson struct
@@ -99,7 +99,7 @@ Before parsing a new question, check if the user asked a very similar question i
 - `internal/cli/query.go` - pre-query check before Step 1 (Parse), call `FindRecentSimilar`, update prior lesson if found
 - `internal/engine/router.go` - annotate re-queried lessons in the prompt
 
-**Why this matters**: currently if a user asks "what did I eat today" and gets a bad answer from butter-stack, then immediately asks again, aida shows the FIRST run as "1 ok" (positive precedent!) - reinforcing the wrong source. Re-query detection flips that to negative.
+**Why this matters**: currently if a user asks "what did I eat today" and gets a bad answer from acme-widgets, then immediately asks again, aida shows the FIRST run as "1 ok" (positive precedent!) - reinforcing the wrong source. Re-query detection flips that to negative.
 
 ### Enhancement 3 - Directive Extraction from Feedback
 
@@ -151,7 +151,7 @@ Sort past lessons by composite weight, show top 5. The router prompt shows the w
 ```
 Past learning (strongest signals first):
 - [weight 1.87] "what did i eat today" -> workouts [4/5 ✓] 👍 (0.92 sim)
-- [weight 0.34] "what did i eat today" -> butter-stack [1/5 ✗] 👎 (0.92 sim, user wanted: workouts)
+- [weight 0.34] "what did i eat today" -> acme-widgets [1/5 ✗] 👎 (0.92 sim, user wanted: workouts)
 ```
 
 **Files to modify:**
@@ -171,7 +171,7 @@ name: Ryan
 role: Senior engineer + side-project builder
 context: |
   I work at a former employer on payment infrastructure. "Partners" means payment
-  merchants (camp-butz, first-chair, etc). At home I build macOS viewer
+  merchants (pine-hollow, first-chair, etc). At home I build macOS viewer
   apps, game prototypes, and fitness tracking tools. I use aida to
   query across all of these - work and personal - from a single CLI.
 preferences:

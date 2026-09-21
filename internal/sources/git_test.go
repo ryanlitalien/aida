@@ -27,7 +27,7 @@ func TestHasRefSelector_BareNumberIsNotBranch(t *testing.T) {
 	// "-n 1" splits into ["-n", "1"]. The bare "1" must NOT be treated
 	// as a branch name, otherwise --all is skipped and feature-branch
 	// commits become invisible.
-	args := removeStripArgs(`--author="Kevin" -n 1`)
+	args := removeStripArgs(`--author="Ralph" -n 1`)
 	if hasRefSelector(args) {
 		t.Errorf("hasRefSelector(%q) = true, want false (bare number is not a ref)", args)
 	}

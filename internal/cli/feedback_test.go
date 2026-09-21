@@ -18,7 +18,7 @@ func TestExtractDirective(t *testing.T) {
 		"first-chair":    {},
 		"spell-checker":  {},
 		"all-the-things": {},
-		"camp-butz":      {},
+		"pine-hollow":    {},
 	}
 
 	tests := []struct {
@@ -51,8 +51,8 @@ func TestExtractDirective(t *testing.T) {
 		},
 		{
 			name:        "multi-source intended",
-			reason:      "should route to camp-butz and all-the-things",
-			intended:    []string{"camp-butz", "all-the-things"},
+			reason:      "should route to pine-hollow and all-the-things",
+			intended:    []string{"pine-hollow", "all-the-things"},
 			excluded:    nil,
 			failureType: "wrong_source",
 		},
@@ -125,7 +125,7 @@ func TestExtractDirective_Deterministic(t *testing.T) {
 		"first-chair":    {},
 		"spell-checker":  {},
 		"all-the-things": {},
-		"camp-butz":      {},
+		"pine-hollow":    {},
 		"slack":          {},
 		"notion":         {},
 		"sqlite":         {},

@@ -1,6 +1,6 @@
-# Two teams, one seam: how Aida's home roster talks to the ButterStack roster
+# Two teams, one seam: how Aida's home roster talks to the Acme Widgets roster
 
-For blog part 4 ("What it spawned"), the ButterStack section. First cut 2026-09-07 from a live session as ASCII; mermaid diagram reworked 2026-09-13 following a design critique. The ASCII below is kept for reference.
+For blog part 4 ("What it spawned"), the Acme Widgets section. First cut 2026-09-07 from a live session as ASCII; mermaid diagram reworked 2026-09-13 following a design critique. The ASCII below is kept for reference.
 
 ```mermaid
 flowchart TD

@@ -24,7 +24,7 @@ const (
 // repository under src.Path. The LLM Call #2 output is expected to be a
 // single line of arguments passed verbatim to `git log`, e.g.:
 //
-//	--author="Kevin" -5 --pretty=format:"%h %an %ad %s" --date=short
+//	--author="Ralph" -5 --pretty=format:"%h %an %ad %s" --date=short
 //
 // The adapter loops every .git/ subdirectory (1-2 levels deep under
 // src.Path) and runs `git log <args>` in each. Results are tagged with
@@ -210,7 +210,7 @@ func removeStripArgs(args string) string {
 }
 
 // tokenizeRespectingQuotes splits on whitespace but keeps quoted strings
-// intact: `--author="Kevin" -5` -> [`--author="Kevin"`, `-5`].
+// intact: `--author="Ralph" -5` -> [`--author="Ralph"`, `-5`].
 func tokenizeRespectingQuotes(s string) []string {
 	var out []string
 	var cur strings.Builder

@@ -48,7 +48,7 @@ type SearchConfig struct {
 	// instead of the default DocsAdapter (which reads only the context file).
 	// Valid values: "" (default, preserves DocsAdapter), "grep".
 	// Present on type: docs sources that have a path with searchable docs,
-	// e.g. camp-butz, first-chair, thrive - those ship with CLAUDE.md + docs/ +
+	// e.g. pine-hollow, first-chair, thrive - those ship with CLAUDE.md + docs/ +
 	// gdrive/ trees that the synthesizer can't extract from context alone.
 	Mode       string   `yaml:"mode,omitempty"`
 	Include    []string `yaml:"include,omitempty"`
@@ -346,7 +346,7 @@ func BuildGlobExpansionHint(entities []string, srcs Sources) string {
 // whose YAML has a non-empty Repo field. It's intended to be appended to the
 // contextDoc passed to LLM Call #2 (query construction) when the source being
 // queried is gh-based - without it, the LLM has no map from entity names the
-// user speaks (e.g. "butterstack", "aida") to the actual owner/repo pairs
+// user speaks (e.g. "acme-widgets", "aida") to the actual owner/repo pairs
 // those sources point at, and historically fell back to guessing.
 //
 // Each line lists owner/repo plus the source's Name and Entities as aliases
@@ -392,7 +392,7 @@ func BuildKnownGitHubReposHint(srcs Sources) string {
 
 	var b strings.Builder
 	b.WriteString("\n\n# Known local GitHub repositories\n\n")
-	b.WriteString("When the user's question references any of the aliases below, use the paired owner/repo VERBATIM for `--repo`. Do NOT invent other owners or guess based on your account. If the user asks about MULTIPLE repos (\"across butterstack and aida\"), pass multiple --repo flags to `gh search prs` rather than using --owner with a single account.\n\n")
+	b.WriteString("When the user's question references any of the aliases below, use the paired owner/repo VERBATIM for `--repo`. Do NOT invent other owners or guess based on your account. If the user asks about MULTIPLE repos (\"across acme-widgets and aida\"), pass multiple --repo flags to `gh search prs` rather than using --owner with a single account.\n\n")
 	for _, e := range entries {
 		fmt.Fprintf(&b, "- %s - aliases: %s\n", e.repo, strings.Join(e.aliases, ", "))
 	}

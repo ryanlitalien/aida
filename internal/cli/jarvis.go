@@ -264,7 +264,7 @@ func newJarvisAskCmd() *cobra.Command {
 typed query straight into the LLM/tools/TTS chain.
 
 Example:
-  aida jarvis ask "what are my three highest priority butterstack tasks"
+  aida jarvis ask "what are my three highest priority acme-widgets tasks"
 
 With --text the answer is printed instead of spoken (useful for tests).`,
 		Args: cobra.MinimumNArgs(1),

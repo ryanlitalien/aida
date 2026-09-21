@@ -659,7 +659,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 	// the web-search catch-all, aida has no source that specializes in this query.
 	// For a connector-shaped question (email/calendar/slack/...), skip the
 	// doomed execute → synthesize → re-execute round-trip and answer straight
-	// from the claude -p fallback. A real source (e.g. butter-stack for attio)
+	// from the claude -p fallback. A real source (e.g. acme-widgets for attio)
 	// is not weak, so it takes the normal path; maybeClaudeFallback's connector
 	// gate lets a plain web query fall through to web-search unchanged.
 	if onlyWeakSources(collectPlanSourceNames(plan)) {

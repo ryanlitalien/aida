@@ -191,10 +191,10 @@ func TestLoadGeminiAntigravityScopes(t *testing.T) {
 		t.Fatalf("mkdir: %v", err)
 	}
 	dbPath := filepath.Join(home, "antigravity-cli", "conversation_summaries.db")
-	seedAntigravityDB(t, dbPath, "conv-1", "file:///Users/fakehome/dev/butter_stack")
+	seedAntigravityDB(t, dbPath, "conv-1", "file:///Users/fakehome/dev/acme_widgets")
 
 	scopes := loadGeminiAntigravityScopes(dbPath)
-	if scopes["conv-1"] != "project:-Users-fakehome-dev-butter_stack" {
+	if scopes["conv-1"] != "project:-Users-fakehome-dev-acme_widgets" {
 		t.Errorf("scopes[conv-1] = %q", scopes["conv-1"])
 	}
 }

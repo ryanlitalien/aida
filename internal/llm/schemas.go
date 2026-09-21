@@ -62,7 +62,7 @@ func IntentSchema() map[string]interface{} {
 			},
 			"effective_question": map[string]interface{}{
 				"type":        []interface{}{"string", "null"},
-				"description": "Set ONLY when the current question is a referential follow-up ('do the same thing, but for issues', 'what about last month') AND a PRIOR TURN block was provided. In that case, rewrite the current question so it stands alone - weave the inherited entities/scope from the prior turn into the question text so downstream stages (executor, synthesizer) have the full context without needing to know about the prior turn. Example: prior question 'what are my open PRs across butterstack and aida* github repos' + current 'do the same thing, but for issues' → effective_question 'what are my open issues across butterstack and aida* github repos'. Return null for non-referential questions.",
+				"description": "Set ONLY when the current question is a referential follow-up ('do the same thing, but for issues', 'what about last month') AND a PRIOR TURN block was provided. In that case, rewrite the current question so it stands alone - weave the inherited entities/scope from the prior turn into the question text so downstream stages (executor, synthesizer) have the full context without needing to know about the prior turn. Example: prior question 'what are my open PRs across acme-widgets and aida* github repos' + current 'do the same thing, but for issues' → effective_question 'what are my open issues across acme-widgets and aida* github repos'. Return null for non-referential questions.",
 			},
 		},
 		"required": []interface{}{

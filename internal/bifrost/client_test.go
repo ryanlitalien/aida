@@ -386,7 +386,7 @@ func TestNewRejectsMismatchedPresetUser(t *testing.T) {
 func TestNewAcceptsMatchingPresetUser(t *testing.T) {
 	fr := &remotex.FakeRunner{}
 	c, err := bifrost.New(fr, "minty", "ryan", []bifrost.Preset{
-		{Name: "work-session", User: "ryan", Cwd: "/home/ryan/dev/butter_stack", Argv: []string{"claude"}},
+		{Name: "work-session", User: "ryan", Cwd: "/home/ryan/dev/acme_widgets", Argv: []string{"claude"}},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -402,7 +402,7 @@ func TestNewAcceptsEmptyPresetUser(t *testing.T) {
 	// reject an empty User regardless of the client's own user.
 	fr := &remotex.FakeRunner{}
 	if _, err := bifrost.New(fr, "minty", "ryan", []bifrost.Preset{
-		{Name: "work-session", Cwd: "/home/ryan/dev/butter_stack", Argv: []string{"claude"}},
+		{Name: "work-session", Cwd: "/home/ryan/dev/acme_widgets", Argv: []string{"claude"}},
 	}); err != nil {
 		t.Fatalf("New: %v", err)
 	}

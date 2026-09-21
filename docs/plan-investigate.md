@@ -63,7 +63,7 @@ profiles:
             api_key_env: ANTHROPIC_API_KEY
             context_paths:
                 - ~/dev/workouts
-                - ~/dev/butterstack
+                - ~/dev/acme-widgets
 ```
 
 `agent_id` and `environment_id` are auto-populated on first `aida investigate` call. The user only needs to configure `api_key_env` and `context_paths`.
@@ -120,7 +120,7 @@ aida investigate 'charges 123456, 123457 - customer didnt get paid'
   4. Load sources, partners, library, soul
   5. Parse (LLM #1 via Haiku) → Intent{action: investigate, entities: [123456, 123457]}
   6. Classify (deterministic) → StrategyInvestigate
-  7. Resolve (deterministic) → partner=camp-butz, merchant_ari=ABC..., charge ARIs
+  7. Resolve (deterministic) → partner=pine-hollow, merchant_ari=ABC..., charge ARIs
 
 [CONTEXT PACKAGING]
   8. Walk profile.Cloud.ContextPaths → collect .sql, .md, .yaml files

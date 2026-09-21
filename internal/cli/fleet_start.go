@@ -73,7 +73,7 @@ func newFleetStartCmd() *cobra.Command {
 			"`aida fleet watch` to complete that job once the run's EXIT marker\n" +
 			"shows up in its log.",
 		Example: "  aida fleet start --name scarlett-978 --task \"tracer bullet: issue #978\" \\\n" +
-			"    --repo ButterStack/butter_stack\n\n" +
+			"    --repo AcmeWidgets/acme_widgets\n\n" +
 			"  aida fleet start --name fleet-start-selftest --task \"Reply with exactly the single word: pong.\" \\\n" +
 			"    --agent none --cwd /home/ryan --question \"fleet start self-test\" --keep-open 20",
 		RunE: func(_ *cobra.Command, _ []string) error {

@@ -190,7 +190,7 @@ func TestNewSubagentBackend_EmptyModelInherits(t *testing.T) {
 func TestNewSubagentBackend_ExpandsHomeDir(t *testing.T) {
 	e := &Entry{
 		Name: "x", Kind: KindSubagent,
-		Subagent: &SubagentSpec{Dir: "~/dev/butter_stack", Agent: "qa"},
+		Subagent: &SubagentSpec{Dir: "~/dev/acme_widgets", Agent: "qa"},
 	}
 	b, err := newSubagentBackend(e, Deps{})
 	if err != nil {

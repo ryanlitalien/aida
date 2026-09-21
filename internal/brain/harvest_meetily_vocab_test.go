@@ -14,8 +14,8 @@ func TestIsMechanicalTaskTag(t *testing.T) {
 	}
 
 	topical := []string{
-		"project:-Users-ryan-dev-aida", "butterstack", "its", "cta", "hoa",
-		"camp-butz", "first-chair", "plt", "personal",
+		"project:-Users-ryan-dev-aida", "acme-widgets", "its", "cta", "hoa",
+		"pine-hollow", "first-chair", "plt", "personal",
 	}
 	for _, tag := range topical {
 		if isMechanicalTaskTag(tag) {
@@ -26,23 +26,23 @@ func TestIsMechanicalTaskTag(t *testing.T) {
 
 func TestComputeMeetilyTagVocabulary(t *testing.T) {
 	taskTags := []string{
-		"project:-Users-ryan-dev-butter_stack", "butterstack", "cta",
+		"project:-Users-ryan-dev-acme_widgets", "acme-widgets", "cta",
 		"profile:work", "due:2026-09-01", "source-hash:deadbeef", "today",
 		"tomorrow", "from-jarvis", "jarvis-error", "tool:aida", "owner:ryan",
 		// A duplicate across two tasks must not appear twice.
 		"cta",
 	}
-	entitySlugs := []string{"kevin", "butterstack"} // "butterstack" overlaps a task tag
-	libraryEntities := []string{"camp-butz", "thrive"}
+	entitySlugs := []string{"ralph", "acme-widgets"} // "acme-widgets" overlaps a task tag
+	libraryEntities := []string{"pine-hollow", "thrive"}
 
 	got := computeMeetilyTagVocabulary(taskTags, entitySlugs, libraryEntities)
 
 	want := map[string]bool{
-		"project:-Users-ryan-dev-butter_stack": true,
-		"butterstack":                          true,
+		"project:-Users-ryan-dev-acme_widgets": true,
+		"acme-widgets":                         true,
 		"cta":                                  true,
-		"kevin":                                true,
-		"camp-butz":                            true,
+		"ralph":                                true,
+		"pine-hollow":                          true,
 		"thrive":                               true,
 	}
 	if len(got) != len(want) {
@@ -93,13 +93,13 @@ func TestBuildMeetilyTagVocabulary_ReadsTasksAndEntities(t *testing.T) {
 		t.Fatalf("AddTask: %v", err)
 	}
 
-	if err := b.DB.UpsertEntity(&EntityRecord{Slug: "butterstack", Type: "tools", Name: "ButterStack"}); err != nil {
+	if err := b.DB.UpsertEntity(&EntityRecord{Slug: "acme-widgets", Type: "tools", Name: "Acme Widgets"}); err != nil {
 		t.Fatalf("UpsertEntity: %v", err)
 	}
 
-	vocab := b.buildMeetilyTagVocabulary([]string{"camp-butz"})
+	vocab := b.buildMeetilyTagVocabulary([]string{"pine-hollow"})
 
-	want := map[string]bool{"cta": true, "hoa": true, "butterstack": true, "camp-butz": true}
+	want := map[string]bool{"cta": true, "hoa": true, "acme-widgets": true, "pine-hollow": true}
 	if len(vocab) != len(want) {
 		t.Fatalf("buildMeetilyTagVocabulary = %v, want exactly %v", vocab, want)
 	}

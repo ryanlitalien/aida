@@ -33,7 +33,7 @@ func TestLintSoul(t *testing.T) {
 	}
 
 	// Healthy → clean.
-	good := "name: Ryan\nrole: engineer\ncontext: |\n  I work at ButterStack.\n"
+	good := "name: Ryan\nrole: engineer\ncontext: |\n  I work at Acme Widgets.\n"
 	if err := os.WriteFile(filepath.Join(dir, "soul.yaml"), []byte(good), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -275,6 +275,26 @@ func (db *DB) migrate() error {
 		return err
 	}
 
+	// Knowledge-domain pages: brain/knowledge/domains/*.md, both generated
+	// source profiles and hand-written prose pages (see knowledge_index.go).
+	// Same derived-index contract as wiki_pages: files are the source of
+	// truth, rows are rebuilt by `aida brain index`, and each row is
+	// mirrored into corpus_fts as "knowledge:<slug>" for keyword recall.
+	_, err = db.conn.Exec(`
+		CREATE TABLE IF NOT EXISTS knowledge_pages (
+			slug TEXT PRIMARY KEY,
+			title TEXT NOT NULL DEFAULT '',
+			path TEXT NOT NULL,
+			body TEXT NOT NULL DEFAULT '',
+			embedding BLOB,
+			indexed_at TEXT NOT NULL DEFAULT ''
+		);
+		CREATE INDEX IF NOT EXISTS idx_knowledge_pages_indexed_at ON knowledge_pages(indexed_at);
+	`)
+	if err != nil {
+		return err
+	}
+
 	// Jarvis voice feedback. Separate from the engine `lessons` table
 	// because the signals (tool selection, persona, brevity, standing
 	// directives) don't fit engine-shaped columns. On-demand inserts only -
@@ -1201,8 +1221,15 @@ func IsStale(brainPath string) bool {
 		}
 	}
 
-	// Also check entity/knowledge/task dirs for staleness
-	for _, dir := range []string{"entities", "knowledge", "tasks"} {
+	// Also check the entity, knowledge-domain, and task dirs for
+	// staleness. Scoped to knowledge/domains rather than all of
+	// knowledge/: that is the only knowledge subtree Index reads
+	// (knowledge_index.go), so a change there is the only one a rebuild
+	// can pick up. knowledge/routing/compiled.md is read straight from
+	// disk at query time and knowledge/patterns is not indexed at all;
+	// counting either here would trigger a full re-embed that then
+	// ignores the file that triggered it.
+	for _, dir := range []string{"entities", filepath.Join("knowledge", "domains"), "tasks"} {
 		dirPath := filepath.Join(brainPath, dir)
 		_ = filepath.WalkDir(dirPath, func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() {

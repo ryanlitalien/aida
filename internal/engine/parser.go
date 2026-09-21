@@ -69,7 +69,7 @@ func (i *Intent) EffectiveQuery() string {
 
 // PriorTurn carries the resolved context of the most recent query in the
 // same cwd so referential follow-ups ("do the same thing, but for issues",
-// "what about last month", "and in butter_stack?") can inherit scope
+// "what about last month", "and in acme_widgets?") can inherit scope
 // instead of silently degrading to an empty parse.
 //
 // The caller (usually cli/query.go) looks up the prior run with

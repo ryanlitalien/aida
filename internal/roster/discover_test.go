@@ -10,11 +10,11 @@ import (
 
 func TestExpandDiscovery_GoodFixture(t *testing.T) {
 	parent := &Entry{
-		Name:          "butterstack-team",
+		Name:          "acme-widgets-team",
 		Discover:      "testdata/agents",
 		CallSignsFrom: "testdata/org-chart.md",
 		Profiles:      []string{"work"},
-		Subagent:      &SubagentSpec{Dir: "testdata/butterstack-stub", Timeout: 45},
+		Subagent:      &SubagentSpec{Dir: "testdata/acme-widgets-stub", Timeout: 45},
 	}
 
 	entries, err := expandDiscovery(parent)
@@ -38,7 +38,7 @@ func TestExpandDiscovery_GoodFixture(t *testing.T) {
 	}
 
 	pm := byName["product-manager"]
-	if pm.Description != "Backlog funnel and grooming for the ButterStack team." {
+	if pm.Description != "Backlog funnel and grooming for the Acme Widgets team." {
 		t.Errorf("product-manager.Description = %q", pm.Description)
 	}
 	if pm.CallSign != "Pamela" {
@@ -50,7 +50,7 @@ func TestExpandDiscovery_GoodFixture(t *testing.T) {
 	if pm.Kind != KindSubagent {
 		t.Errorf("product-manager.Kind = %q, want %q", pm.Kind, KindSubagent)
 	}
-	if pm.Subagent.Agent != "product-manager" || pm.Subagent.Dir != "testdata/butterstack-stub" {
+	if pm.Subagent.Agent != "product-manager" || pm.Subagent.Dir != "testdata/acme-widgets-stub" {
 		t.Errorf("product-manager.Subagent = %+v", pm.Subagent)
 	}
 	if pm.Subagent.Timeout != parent.Subagent.Timeout {

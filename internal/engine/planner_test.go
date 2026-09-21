@@ -12,7 +12,7 @@ func testSources() config.Sources {
 			Type:         "data-source",
 			Description:  "Company SQL warehouse - partner, resource, checkout, booking, GMV queries",
 			Capabilities: []string{"sql-query", "partner-lookup", "ari-lookup", "gmv-analysis", "transaction-history", "settlement-lookup"},
-			Entities:     []string{"thrive", "viewer-core", "camp-butz", "mcp-perforce", "google"},
+			Entities:     []string{"thrive", "viewer-core", "pine-hollow", "mcp-perforce", "google"},
 		},
 		"plausible": &config.Source{
 			Type:         "tool",
@@ -21,7 +21,7 @@ func testSources() config.Sources {
 		},
 		"all-the-things": &config.Source{
 			Type:         "codebase",
-			Description:  "Butterstack monorepo - all application source code",
+			Description:  "Acme Widgets monorepo - all application source code",
 			Capabilities: []string{"code-reference", "error-source-lookup", "config-lookup"},
 		},
 		"viewer-core-docs": &config.Source{

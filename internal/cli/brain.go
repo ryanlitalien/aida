@@ -235,12 +235,14 @@ func newBrainSearchCmd() *cobra.Command {
 				return err
 			}
 
-			if len(sc.SimilarLessons) == 0 {
-				fmt.Println("No similar lessons found.")
+			if len(sc.SimilarLessons) == 0 && len(sc.KnowledgePages) == 0 {
+				fmt.Println("No similar lessons or knowledge pages found.")
 				return nil
 			}
 
-			fmt.Printf("Found %d similar lessons:\n\n", len(sc.SimilarLessons))
+			if len(sc.SimilarLessons) > 0 {
+				fmt.Printf("Found %d similar lessons:\n\n", len(sc.SimilarLessons))
+			}
 			for i, sl := range sc.SimilarLessons {
 				l := sl.Lesson
 				srcs := strings.Join(l.Sources, ", ")
@@ -254,6 +256,13 @@ func newBrainSearchCmd() *cobra.Command {
 				}
 				fmt.Printf("%d. (sim=%.2f) %q\n   → %s%s%s\n   %s\n\n",
 					i+1, sl.Similarity, l.Question, srcs, quality, feedback, l.Timestamp)
+			}
+
+			if len(sc.KnowledgePages) > 0 {
+				fmt.Printf("Found %d knowledge pages:\n\n", len(sc.KnowledgePages))
+				for i, kp := range sc.KnowledgePages {
+					fmt.Printf("%d. %s\n   %s\n\n", i+1, kp.Title, kp.Path)
+				}
 			}
 
 			if sc.RoutingWisdom != "" {

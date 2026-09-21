@@ -53,7 +53,7 @@ func TestCompactToken(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"butter-stack", "butterstack"},
+		{"acme-widgets", "acmewidgets"},
 		{"csv-viewer", "csvviewer"},
 		{"thrive", "thrive"},
 		{"mcp-perforce", "mcpperforce"},
@@ -69,11 +69,11 @@ func TestCompactToken(t *testing.T) {
 
 func TestCompactMatchScenarios(t *testing.T) {
 	// These are the real-world cases: user types various forms, source
-	// name is "butter-stack".
-	sourceName := "butter-stack"
+	// name is "acme-widgets".
+	sourceName := "acme-widgets"
 	normName := normalizeSourceToken(sourceName)
 
-	variants := []string{"butterstack", "butter_stack", "butter-stack", "ButterStack", "Butter_Stack"}
+	variants := []string{"acmewidgets", "acme_widgets", "acme-widgets", "AcmeWidgets", "Acme_Widgets"}
 	for _, v := range variants {
 		normEnt := normalizeSourceToken(v)
 		if normEnt != normName && compactToken(normEnt) != compactToken(normName) {

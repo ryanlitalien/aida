@@ -20,7 +20,7 @@ func TestInsertAndFindSimilarRunCache(t *testing.T) {
 	orthogonal[1] = 1.0
 
 	if err := db.InsertRunCache(&RunCacheRecord{
-		ID: "rc-1", Profile: "work", Question: "what is our GMV for camp-butz",
+		ID: "rc-1", Profile: "work", Question: "what is our GMV for pine-hollow",
 		Embedding: aligned, Answer: "GMV is $1.2M", Sources: []string{"sqlite"},
 		Confidence: 0.9, Created: "2026-05-24T10:00:00Z",
 	}); err != nil {

@@ -627,7 +627,7 @@ func twoLaneDeps(heimdallFR, ryanFR *remotex.FakeRunner) dashboardDeps {
 		panic(err) // test-fixture construction only, never real config
 	}
 	ryanClient, err := bifrost.New(ryanFR, "minty", "ryan", []bifrost.Preset{
-		{Name: "scarlett-978", User: "ryan", Cwd: "/home/ryan/dev/butter_stack", Argv: []string{"claude"}},
+		{Name: "scarlett-978", User: "ryan", Cwd: "/home/ryan/dev/acme_widgets", Argv: []string{"claude"}},
 	})
 	if err != nil {
 		panic(err)

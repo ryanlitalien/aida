@@ -251,13 +251,13 @@ func TestMeetilyDistillSystemPrompt_NoGlossaryNoVocabulary(t *testing.T) {
 }
 
 func TestMeetilyDistillSystemPrompt_WithGlossaryAndVocabulary(t *testing.T) {
-	glossary := `ButterStack (mis: "butter sack"), Thor Odinson (mis: "Owens")`
-	vocabulary := []string{"cta", "butterstack", "hoa"}
+	glossary := `Acme Widgets (mis: "acne widgets"), Thor Odinson (mis: "Owens")`
+	vocabulary := []string{"cta", "acme-widgets", "hoa"}
 	got := meetilyDistillSystemPrompt(glossary, vocabulary)
 	if !contains(got, meetilyDistillSystemPromptBase) {
 		t.Error("expected base prompt to still be present")
 	}
-	if !contains(got, "cta, butterstack, hoa") {
+	if !contains(got, "cta, acme-widgets, hoa") {
 		t.Errorf("expected vocabulary listed in the prompt: %q", got)
 	}
 	if !contains(got, glossary) {
@@ -270,11 +270,11 @@ func TestMeetilyDistillSystemPrompt_WithGlossaryAndVocabulary(t *testing.T) {
 
 func TestReadMeetilyGlossary(t *testing.T) {
 	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "GLOSSARY.md"), []byte("# Glossary\n\nButterStack, not butter sack."), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "GLOSSARY.md"), []byte("# Glossary\n\nAcme Widgets, not acne widgets."), 0644); err != nil {
 		t.Fatalf("write GLOSSARY.md: %v", err)
 	}
 	got := readMeetilyGlossary(root)
-	if !contains(got, "ButterStack, not butter sack.") {
+	if !contains(got, "Acme Widgets, not acne widgets.") {
 		t.Errorf("readMeetilyGlossary = %q", got)
 	}
 }
@@ -295,7 +295,7 @@ func TestHarvestMeetily_EndToEnd(t *testing.T) {
 	writeMeetilyCallFixture(t, root, "2026-08-24-14-09-chief-tech-advisor",
 		[]string{"We agreed to launch the CTA practice next month."},
 		"Discussed CTA practice launch.", "CTA Practice Launch")
-	if err := os.WriteFile(filepath.Join(root, "GLOSSARY.md"), []byte("CTA = ChiefTechAdvisor, Kevin's LLC."), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "GLOSSARY.md"), []byte("CTA = ChiefTechAdvisor, Ralph's LLC."), 0644); err != nil {
 		t.Fatalf("write GLOSSARY.md: %v", err)
 	}
 
@@ -337,7 +337,7 @@ func TestHarvestMeetily_EndToEnd(t *testing.T) {
 	if rec.Key != "meetily:2026-08-24-14-09-chief-tech-advisor:cta-practice-launch" {
 		t.Errorf("key = %q", rec.Key)
 	}
-	if !contains(capturedSystemPrompt, "CTA = ChiefTechAdvisor, Kevin's LLC.") {
+	if !contains(capturedSystemPrompt, "CTA = ChiefTechAdvisor, Ralph's LLC.") {
 		t.Errorf("glossary content did not reach the distill system prompt: %q", capturedSystemPrompt)
 	}
 

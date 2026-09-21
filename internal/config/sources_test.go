@@ -118,12 +118,12 @@ func TestFilterByReachablePath_FileNotDir(t *testing.T) {
 // TestBuildKnownGitHubReposHint covers the helper that injects the
 // "known repos" table into gh-based query construction. Regression:
 // prior to this helper, the query-construction LLM had no map from
-// entity names the user speaks (e.g. "butterstack", "aida") to the
+// entity names the user speaks (e.g. "acme-widgets", "aida") to the
 // actual owner/repo pairs on library sources, and fell back to
 // guessing `--owner ryanlitalien`.
 func TestBuildKnownGitHubReposHint(t *testing.T) {
 	srcs := Sources{
-		"butter-stack": {Repo: "butterstack/butter_stack", Entities: []string{"butter", "stack"}},
+		"acme-widgets": {Repo: "acmewidgets/acme_widgets", Entities: []string{"acme", "widgets"}},
 		"aida":         {Repo: "ryanlitalien/aida", Entities: []string{"aida"}},
 		"sqlite":       {Repo: "", Entities: []string{"db"}}, // no repo → excluded
 		"nil-source":   nil,                                  // nil → excluded without panic
@@ -133,13 +133,13 @@ func TestBuildKnownGitHubReposHint(t *testing.T) {
 		t.Fatal("expected non-empty hint")
 	}
 	// Each populated source's owner/repo should appear.
-	for _, want := range []string{"butterstack/butter_stack", "ryanlitalien/aida"} {
+	for _, want := range []string{"acmewidgets/acme_widgets", "ryanlitalien/aida"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("hint missing %q, got:\n%s", want, got)
 		}
 	}
 	// Aliases (source name + Entities + owner/name tokens) should appear.
-	for _, want := range []string{"butter-stack", "butter", "stack", "butterstack", "butter_stack", "aida", "aida", "ryanlitalien"} {
+	for _, want := range []string{"acme-widgets", "acme", "widgets", "acmewidgets", "acme_widgets", "aida", "aida", "ryanlitalien"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("hint missing alias %q, got:\n%s", want, got)
 		}

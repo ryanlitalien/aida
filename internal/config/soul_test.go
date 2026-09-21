@@ -15,7 +15,7 @@ func TestSoulFamilyAndNotesReachPrompt(t *testing.T) {
 	const raw = `
 name: Ryan
 role: Engineer
-context: works at ButterStack
+context: works at Acme Widgets
 family:
   kids:
     - name: Jack Reyes
@@ -54,10 +54,10 @@ func TestSoulPeopleReachPrompt(t *testing.T) {
 	const raw = `
 name: Ryan
 people:
-  - name: Kevin
+  - name: Ralph
     aka: [partner@example.com, CTA]
-    role: ButterStack BizOps + AWS partnership
-    note: Former AWS Games counterpart; involved with ButterStack via his LLC.
+    role: Acme Widgets BizOps + AWS partnership
+    note: Former AWS Games counterpart; involved with Acme Widgets via his LLC.
 `
 	var s Soul
 	if err := yaml.Unmarshal([]byte(raw), &s); err != nil {
@@ -66,7 +66,7 @@ people:
 	out := s.ForPrompt()
 	for _, want := range []string{
 		"- People:",
-		"Kevin (aka partner@example.com, CTA) - ButterStack BizOps + AWS partnership",
+		"Ralph (aka partner@example.com, CTA) - Acme Widgets BizOps + AWS partnership",
 		"Former AWS Games counterpart",
 	} {
 		if !strings.Contains(out, want) {

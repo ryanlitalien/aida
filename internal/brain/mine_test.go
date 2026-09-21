@@ -47,7 +47,7 @@ func TestRunEligibleForMining(t *testing.T) {
 		},
 		{
 			name: "zero StartedAt",
-			run:  runs.Run{ID: "run-no-timestamp", Answer: "GMV is $1.2M for camp-butz"},
+			run:  runs.Run{ID: "run-no-timestamp", Answer: "GMV is $1.2M for pine-hollow"},
 			want: false,
 		},
 		{
@@ -67,7 +67,7 @@ func TestRunEligibleForMining(t *testing.T) {
 		},
 		{
 			name: "normal eligible run, no matched lesson",
-			run:  runs.Run{ID: "run-good", Answer: "GMV is $1.2M for camp-butz", StartedAt: startedAt},
+			run:  runs.Run{ID: "run-good", Answer: "GMV is $1.2M for pine-hollow", StartedAt: startedAt},
 			want: true,
 		},
 		{
@@ -162,7 +162,7 @@ func TestMineRuns_CreatedFromSourceRunStartedAt(t *testing.T) {
 	t.Setenv("HOME", homeDir)
 
 	oldStartedAt := time.Date(2026, 4, 28, 9, 0, 0, 0, time.UTC)
-	const question = "what is our GMV for camp-butz"
+	const question = "what is our GMV for pine-hollow"
 	const answer = "GMV is $1.2M"
 
 	if _, err := runs.Save(&runs.Run{

@@ -18,6 +18,11 @@ package brain
 //               the "fts" channel above - wiki_index.go writes "wiki:"
 //               doc_ids into the shared corpus_fts table, so this channel
 //               only needs to add the vector signal FTS can't provide.
+//   knowledge - Voyage embedding cosine similarity over indexed
+//               brain/knowledge/domains pages (aida brain index,
+//               internal/brain/knowledge_index.go). Same split as wiki:
+//               keyword coverage rides the shared corpus_fts table via
+//               "knowledge:" doc_ids, this channel adds the vector side.
 //
 // HyDE (generate hypothetical answer, embed, run vector search again) is
 // the canonical 6th channel from Cloudflare's Agent Memory beta. We skip
@@ -68,16 +73,17 @@ const (
 	ChannelSubstring SearchChannel = "substring"
 	ChannelFactKey   SearchChannel = "fact-key"
 	ChannelWiki      SearchChannel = "wiki"
+	ChannelKnowledge SearchChannel = "knowledge"
 )
 
 // MultiResult is one fused retrieval hit.
 type MultiResult struct {
-	// DocID is "lesson:<id>" or "memory:<id>" - the same key used in
-	// the FTS5 corpus. Caller can split on ":" to dispatch to the
-	// right table for full content.
+	// DocID is "lesson:<id>", "memory:<id>", "wiki:<slug>", or
+	// "knowledge:<slug>" - the same key used in the FTS5 corpus. Caller
+	// can split on ":" to dispatch to the right table for full content.
 	DocID string
 	// DocType is one of "lesson", "memory:fact", "memory:event",
-	// "memory:instruction", "wiki:page".
+	// "memory:instruction", "wiki:page", "knowledge:domain".
 	DocType string
 	// Body is a short representative snippet (the question for
 	// lessons, the body for memory records) suitable for prompt
@@ -119,8 +125,8 @@ func (b *Brain) SearchMulti(ctx context.Context, question string, entities []str
 	}
 
 	// Query embedding, computed once and shared by every vector-based
-	// channel below (lessons + wiki) rather than re-embedding per
-	// channel.
+	// channel below (lessons + wiki + knowledge) rather than re-embedding
+	// per channel.
 	rankings := make(map[SearchChannel][]string)
 	var queryEmbedding []float32
 	if b.Embeddings != nil && b.Embeddings.Available() {
@@ -202,6 +208,18 @@ func (b *Brain) SearchMulti(ctx context.Context, question string, entities []str
 		if err == nil {
 			for _, p := range pages {
 				rankings[ChannelWiki] = append(rankings[ChannelWiki], "wiki:"+p.Slug)
+			}
+		}
+	}
+
+	// Channel 6: knowledge-domain pages (knowledge_index.go). Vector
+	// search over knowledge_pages' embeddings; the keyword side is again
+	// already covered by the "knowledge:<slug>" rows in corpus_fts.
+	if queryEmbedding != nil {
+		pages, err := b.DB.FindSimilarKnowledgePages(queryEmbedding, k*2)
+		if err == nil {
+			for _, p := range pages {
+				rankings[ChannelKnowledge] = append(rankings[ChannelKnowledge], "knowledge:"+p.Slug)
 			}
 		}
 	}
@@ -375,6 +393,22 @@ func hydrateMultiResult(db *DB, r *MultiResult) {
 		if r.Created == "" {
 			r.Created = p.IndexedAt
 		}
+	case "knowledge":
+		p, err := db.GetKnowledgePage(parts[1])
+		if err != nil || p == nil {
+			return
+		}
+		r.DocType = KnowledgeDocType
+		snippet := p.Body
+		const maxSnippet = 300
+		if len(snippet) > maxSnippet {
+			snippet = snippet[:maxSnippet] + "..."
+		}
+		r.Body = p.Title + "\n" + strings.TrimSpace(snippet)
+		// Domain pages carry no frontmatter timestamp; indexed_at is the
+		// only anchor available. Curated pages are kept current by hand,
+		// so anchoring decay to the last index run is the honest choice.
+		r.Created = p.IndexedAt
 	}
 }
 
@@ -393,6 +427,36 @@ func (db *DB) FTSSearch(question string, limit int, profile string) ([]string, e
 		 ORDER BY rank
 		 LIMIT ?`,
 		q, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// FTSSearchByType is FTSSearch restricted to one corpus_fts doc_type
+// (e.g. KnowledgeDocType), for callers that want a single corpus's
+// keyword hits without them competing for the limit against every
+// lesson and memory row. Returns doc_ids in MATCH-rank order.
+func (db *DB) FTSSearchByType(question, docType string, limit int) ([]string, error) {
+	q := buildFTSQuery(question)
+	if q == "" {
+		return nil, nil
+	}
+	rows, err := db.conn.Query(`
+		SELECT doc_id FROM corpus_fts
+		 WHERE corpus_fts MATCH ? AND doc_type = ?
+		 ORDER BY rank
+		 LIMIT ?`,
+		q, docType, limit,
 	)
 	if err != nil {
 		return nil, err

@@ -363,7 +363,7 @@ func TestHarvestDirectMemories_WritesAndGatesOnChange(t *testing.T) {
 		Type:      MemoryEvent,
 		Key:       "gemini:antigravity:conv-1:walkthrough",
 		Body:      "We implemented the thing.",
-		Scope:     "project:-Users-ryan-dev-butter_stack",
+		Scope:     "project:-Users-ryan-dev-acme_widgets",
 		Tags:      []string{"gemini-antigravity", "conversation:conv-1"},
 		Source:    "gemini-antigravity:/fake/walkthrough.md",
 	}

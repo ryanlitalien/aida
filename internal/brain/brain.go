@@ -159,6 +159,7 @@ func (b *Brain) ensureDirs() error {
 type SearchContext struct {
 	SimilarLessons []SimilarLesson
 	EntityPages    []EntityPage
+	KnowledgePages []KnowledgePageRecord
 	RoutingWisdom  string
 	OpenTasks      []TaskRecord
 }
@@ -173,7 +174,8 @@ type EntityPage struct {
 //  1. Embeds the question via Voyage AI
 //  2. Finds K similar past lessons in brain.db
 //  3. Looks up entities mentioned in the query
-//  4. Loads compiled routing wisdom
+//  4. Finds K matching knowledge-domain pages (vector + keyword)
+//  5. Loads compiled routing wisdom
 func (b *Brain) Search(ctx context.Context, question string, entities []string, k int) (*SearchContext, error) {
 	sc := &SearchContext{}
 
@@ -209,13 +211,19 @@ func (b *Brain) Search(ctx context.Context, question string, entities []string, 
 		}
 	}
 
-	// 3. Load compiled routing wisdom
+	// 3. Knowledge-domain pages (knowledge_index.go). Vector hits first
+	// when the question could be embedded, then keyword hits from the
+	// corpus_fts rows so pages still surface with no embedding client
+	// (or for literal tokens the embedding blurs), deduped and capped.
+	sc.KnowledgePages = b.findKnowledgePages(question, queryEmbedding, k)
+
+	// 4. Load compiled routing wisdom
 	wisdomPath := filepath.Join(b.Path, "knowledge", "routing", "compiled.md")
 	if data, err := os.ReadFile(wisdomPath); err == nil {
 		sc.RoutingWisdom = string(data)
 	}
 
-	// 4. If query looks task-related, include open tasks. Profile isolation
+	// 5. If query looks task-related, include open tasks. Profile isolation
 	// is enforced by DB.ListTasks itself - no manual tag construction.
 	if isTaskQuery(question) {
 		tasks, err := b.DB.ListTasks(false, nil, 0, 20, b.profile, nil)
@@ -227,6 +235,52 @@ func (b *Brain) Search(ctx context.Context, question string, entities []string, 
 	}
 
 	return sc, nil
+}
+
+// findKnowledgePages merges the vector and keyword channels over
+// knowledge_pages into one ordered, deduplicated list of at most k pages.
+// Vector hits lead (they are similarity-ranked); FTS hits fill in behind
+// them in MATCH-rank order.
+func (b *Brain) findKnowledgePages(question string, queryEmbedding []float32, k int) []KnowledgePageRecord {
+	if k <= 0 {
+		return nil
+	}
+	var out []KnowledgePageRecord
+	seen := make(map[string]bool)
+	if queryEmbedding != nil {
+		pages, err := b.DB.FindSimilarKnowledgePages(queryEmbedding, k)
+		if err != nil {
+			ui.PrintVerbose("Brain knowledge", "vector failed: "+err.Error())
+		}
+		for _, p := range pages {
+			if !seen[p.Slug] {
+				seen[p.Slug] = true
+				out = append(out, p)
+			}
+		}
+	}
+	if len(out) < k {
+		ids, err := b.DB.FTSSearchByType(question, KnowledgeDocType, k)
+		if err != nil {
+			ui.PrintVerbose("Brain knowledge", "fts failed: "+err.Error())
+		}
+		for _, id := range ids {
+			slug := strings.TrimPrefix(id, "knowledge:")
+			if seen[slug] {
+				continue
+			}
+			p, err := b.DB.GetKnowledgePage(slug)
+			if err != nil || p == nil {
+				continue
+			}
+			seen[slug] = true
+			out = append(out, *p)
+			if len(out) >= k {
+				break
+			}
+		}
+	}
+	return out
 }
 
 func isTaskQuery(q string) bool {

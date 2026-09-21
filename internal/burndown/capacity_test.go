@@ -24,7 +24,7 @@ floors:
       7d: {daytime: 30, last_24h_before_reset: 0}
       7d-fable: {daytime: 50, overnight: 50, hard_floor: 50}
   anthropic-pro-bs:
-    provider: "Anthropic / Claude Pro (ButterStack)"
+    provider: "Anthropic / Claude Pro (Acme Widgets)"
     windows:
       7d: {daytime: 15, last_24h_before_reset: 0}
   openai-plus:
@@ -134,7 +134,7 @@ func TestCapacityFor_TableDriven(t *testing.T) {
 		{
 			// hello@ Pro 7-day: pace floor clamps down to what's left.
 			name:     "hello pro 7-day clamped to left",
-			provider: "Anthropic / Claude Pro (ButterStack)",
+			provider: "Anthropic / Claude Pro (Acme Widgets)",
 			bar: models.Bar{
 				Label: "7-day", Percent: 81, Left: 19, ResetsAt: farFuture,
 				Pace: &models.Pace{Verdict: models.PaceHot, Projected: 99},
@@ -383,7 +383,7 @@ func TestCapacityForSpend_FloorNoteConsistency(t *testing.T) {
 		{
 			name: "pace already well above floor_usd wins outright",
 			s: models.Spend{
-				Key: "butterstack", Spend: 32.81, Budget: 75,
+				Key: "acme-widgets", Spend: 32.81, Budget: 75,
 				Pace: &models.Pace{Verdict: models.PaceOnPace, Projected: 56, Ratio: 1.05},
 			},
 		},

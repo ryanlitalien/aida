@@ -71,19 +71,19 @@ func TestBuildReExecutionGuidanceHighQuality(t *testing.T) {
 // prior source errored out, the guidance includes the failing command so
 // the retry LLM can fix the specific flag rather than drift to a new
 // unrelated query. Regression test for the "--owner on gh pr list" bug
-// where re-exec dropped the butter_stack --repo scope entirely.
+// where re-exec dropped the acme_widgets --repo scope entirely.
 func TestBuildReExecutionGuidance_SurfacesPriorErrors(t *testing.T) {
 	qa := &QualityAssessment{Quality: 2, Reason: "error answer"}
 	results := []sources.SourceResult{
 		{
 			Source:  "github",
 			Status:  "error",
-			Command: "pr list --repo butterstack/butter_stack --state open --owner ryanlitalien",
+			Command: "pr list --repo acmewidgets/acme_widgets --state open --owner ryanlitalien",
 			Summary: "exec error: unknown flag: --owner",
 		},
 	}
 	guidance := buildReExecutionGuidance(qa, results)
-	if !contains(guidance, "pr list --repo butterstack/butter_stack") {
+	if !contains(guidance, "pr list --repo acmewidgets/acme_widgets") {
 		t.Errorf("expected failing command in guidance, got: %s", guidance)
 	}
 	if !contains(guidance, "unknown flag: --owner") {

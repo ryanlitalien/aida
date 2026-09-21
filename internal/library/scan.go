@@ -603,8 +603,8 @@ func writeDiscovered(rootPath string, discoveries []DiscoveredSource, force bool
 	// Build a lookup of (expanded path) → existing source name so the
 	// scanner can SKIP discoveries whose folder is already registered
 	// under a different slug - preventing spurious dupes like
-	// `butter_stack` getting created when `butter-stack` already points
-	// at the same `~/dev/butter_stack` directory.
+	// `acme_widgets` getting created when `acme-widgets` already points
+	// at the same `~/dev/acme_widgets` directory.
 	existingByPath := map[string]string{}
 	for name, entry := range manifest.Sources {
 		var src config.Source
@@ -642,7 +642,7 @@ func writeDiscovered(rootPath string, discoveries []DiscoveredSource, force bool
 		// 0. Path-collision skip: if some other slug already points at
 		//    the same folder, do nothing - re-creating the registration
 		//    under the discovered slug would just clutter the registry
-		//    with `butter_stack` vs `butter-stack` style dupes.
+		//    with `acme_widgets` vs `acme-widgets` style dupes.
 		if existing, ok := existingByPath[expandPath(d.Path)]; ok && existing != d.Name {
 			reports = append(reports, WriteReport{
 				Name:          d.Name,

@@ -118,12 +118,12 @@ func TestLoad_ClaudeConfig(t *testing.T) {
 	const yamlWithClaudeBlock = `
 updated: 2026-09-08
 providers:
-  - name: anthropic-butterstack
-    label: Anthropic / Claude Pro (ButterStack)
+  - name: anthropic-acme-widgets
+    label: Anthropic / Claude Pro (Acme Widgets)
     plan: Claude Pro
     probe: claude-oauth
     claude:
-      credentials_file: /home/ryan/.claude-butterstack/.credentials.json
+      credentials_file: /home/ryan/.claude-acmewidgets/.credentials.json
       ssh_host: minty
     models:
       - id: claude-sonnet-5
@@ -144,7 +144,7 @@ providers:
 	if cfg == nil {
 		t.Fatal("ClaudeConfig is nil")
 	}
-	if cfg.CredentialsFile != "/home/ryan/.claude-butterstack/.credentials.json" {
+	if cfg.CredentialsFile != "/home/ryan/.claude-acmewidgets/.credentials.json" {
 		t.Errorf("CredentialsFile = %q", cfg.CredentialsFile)
 	}
 	if cfg.SSHHost != "minty" {

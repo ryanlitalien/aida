@@ -341,7 +341,7 @@ func executeSourceOnce(ctx context.Context, client *llm.Client, scored ScoredSou
 	// 2b. For gh-based sources, append a "known repos" table built from
 	// every other library source that has a `repo:` field. Without this
 	// the query-construction LLM has no map from entity names the user
-	// speaks (e.g. "butterstack", "aida") to the actual owner/repo
+	// speaks (e.g. "acme-widgets", "aida") to the actual owner/repo
 	// pairs stored on those sources - it historically fell back to
 	// guessing `--owner ryanlitalien` and returned off-topic results.
 	// The hint is only relevant for gh because `--repo owner/name` is

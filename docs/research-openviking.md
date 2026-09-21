@@ -62,7 +62,7 @@ The two occupy mostly complementary layers.
 - Defaults funnel toward ByteDance's Ark endpoint and the Volcano Engine SaaS; the open-source repo is partly a funnel. `usage_reporter`/`telemetry` modules exist in the package (posture unverified).
 - Benchmarks are self-published and OpenClaw-centric; independent validation is thin.
 
-**Data governance**: the default config sends all ingested content (memories, code, docs) to a Beijing Ark endpoint. Under the house rule that China-hosted providers never touch ButterStack/ITS/personal data, the default config is off-limits; a fully local (Ollama/LiteLLM) config is the only acceptable mode, and telemetry would need a source check first.
+**Data governance**: the default config sends all ingested content (memories, code, docs) to a Beijing Ark endpoint. Under the house rule that China-hosted providers never touch Acme Widgets/ITS/personal data, the default config is off-limits; a fully local (Ollama/LiteLLM) config is the only acceptable mode, and telemetry would need a source check first.
 
 ## What to borrow (patterns, not the dependency)
 

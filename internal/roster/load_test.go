@@ -82,7 +82,7 @@ func TestLoad_DiscoveryExpansion(t *testing.T) {
 	if devops.Subagent == nil || devops.Subagent.Agent != "devops" {
 		t.Errorf("devops.Subagent.Agent = %+v, want Agent=devops", devops.Subagent)
 	}
-	if devops.Subagent.Dir != "testdata/butterstack-stub" {
+	if devops.Subagent.Dir != "testdata/acme-widgets-stub" {
 		t.Errorf("devops.Subagent.Dir = %q, want inherited parent dir", devops.Subagent.Dir)
 	}
 	if len(devops.Profiles) != 1 || devops.Profiles[0] != "work" {
@@ -101,8 +101,8 @@ func TestLoad_DiscoveryExpansion(t *testing.T) {
 	}
 
 	// The discovery parent itself must never appear as a dispatch target.
-	if findEntry(r.Entries(), "butterstack-team") != nil {
-		t.Error("discovery parent \"butterstack-team\" leaked into entries")
+	if findEntry(r.Entries(), "acme-widgets-team") != nil {
+		t.Error("discovery parent \"acme-widgets-team\" leaked into entries")
 	}
 }
 

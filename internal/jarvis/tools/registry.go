@@ -174,14 +174,14 @@ func tasksListTool(b *brain.Brain) Tool {
 		Name: "tasks_list",
 		Description: "List the user's TODO/project tasks, sorted by priority (p1 > p2 > p3). " +
 			"These are tasks the user has explicitly added to their task tracker. " +
-			"Filter by tag (e.g. 'butterstack', 'work', 'home'). " +
+			"Filter by tag (e.g. 'acme-widgets', 'work', 'home'). " +
 			"Returns task title, status, priority tag, and id. " +
 			"NOT for activity/personal-data history (workouts, sleep, fitness, " +
 			"health, finances, etc.) - use aida_query for those.",
 		Schema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"tag":   map[string]interface{}{"type": "string", "description": "filter by tag, e.g. 'butterstack'"},
+				"tag":   map[string]interface{}{"type": "string", "description": "filter by tag, e.g. 'acme-widgets'"},
 				"limit": map[string]interface{}{"type": "integer", "description": "max tasks to return (default 10)"},
 			},
 		},
@@ -714,7 +714,7 @@ func tasksAddTool(b *brain.Brain, autoSync bool) Tool {
 				"tags": map[string]interface{}{
 					"type":        "array",
 					"items":       map[string]interface{}{"type": "string"},
-					"description": "optional tags, e.g. ['butterstack', 'p1']",
+					"description": "optional tags, e.g. ['acme-widgets', 'p1']",
 				},
 				"body": map[string]interface{}{
 					"type":        "string",

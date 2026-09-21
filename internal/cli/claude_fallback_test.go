@@ -49,8 +49,8 @@ func TestOnlyWeakSources(t *testing.T) {
 		{[]string{"web-search"}, true},
 		{nil, false},                                    // no sources → handled by the no-source path
 		{[]string{}, false},                             // ditto
-		{[]string{"butter-stack"}, false},               // a real source
-		{[]string{"web-search", "butter-stack"}, false}, // mixed → a real source is present
+		{[]string{"acme-widgets"}, false},               // a real source
+		{[]string{"web-search", "acme-widgets"}, false}, // mixed → a real source is present
 		{[]string{"git-dev"}, false},
 	}
 	for _, c := range cases {

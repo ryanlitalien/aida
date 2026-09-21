@@ -9,8 +9,8 @@ import (
 func TestPickIDColumn_PrefersStringOverNumericAndDate(t *testing.T) {
 	headers := []string{"month", "bucket", "total_spent"}
 	rows := []map[string]string{
-		{"month": "2026-04", "bucket": "ButterStack", "total_spent": "316.19"},
-		{"month": "2026-04", "bucket": "Camp Butz", "total_spent": "3098.61"},
+		{"month": "2026-04", "bucket": "Acme Widgets", "total_spent": "316.19"},
+		{"month": "2026-04", "bucket": "Pine Hollow", "total_spent": "3098.61"},
 		{"month": "2026-04", "bucket": "Personal", "total_spent": "41289.50"},
 	}
 	got := pickIDColumn(headers, rows)
@@ -41,10 +41,10 @@ func TestPickIDColumn_Empty(t *testing.T) {
 }
 
 func TestDeriveRowIDFromColumn(t *testing.T) {
-	row := map[string]string{"bucket": "Camp Butz", "amount": "3098.61"}
+	row := map[string]string{"bucket": "Pine Hollow", "amount": "3098.61"}
 	got := deriveRowIDFromColumn(0, row, "bucket")
-	if got != "camp-butz" {
-		t.Errorf("deriveRowIDFromColumn() = %q, want %q", got, "camp-butz")
+	if got != "pine-hollow" {
+		t.Errorf("deriveRowIDFromColumn() = %q, want %q", got, "pine-hollow")
 	}
 }
 
@@ -74,7 +74,7 @@ func TestLooksNumeric(t *testing.T) {
 		{"-100", true},
 		{"1,234.56", true},
 		{"0", true},
-		{"ButterStack", false},
+		{"Acme Widgets", false},
 		{"2026-04", false},
 		{"", false},
 		{"12abc", false},
@@ -95,10 +95,10 @@ func TestLooksDateOnly(t *testing.T) {
 		{"2026-04", true},
 		{"2026-03-15", true},
 		{"2026-03-15T10:00:00Z", true},
-		{"ButterStack", false},
+		{"Acme Widgets", false},
 		{"42.50", false},
 		{"", false},
-		{"Camp Butz", false},
+		{"Pine Hollow", false},
 	}
 	for _, tc := range cases {
 		got := looksDateOnly(tc.input)
@@ -171,14 +171,14 @@ func TestEnsureUniqueIDs_NoDuplicates(t *testing.T) {
 
 func TestJSONRowID_GitHubPRShape(t *testing.T) {
 	row := map[string]interface{}{
-		"repository": map[string]interface{}{"name": "butter_stack"},
+		"repository": map[string]interface{}{"name": "acme_widgets"},
 		"number":     float64(3476),
 		"title":      "Bump three from 0.170.0 to 0.180.0",
 		"state":      "OPEN",
 	}
 	got := jsonRowID(row, "", 0)
-	if got != "butter-stack-3476" {
-		t.Errorf("jsonRowID() = %q, want %q", got, "butter-stack-3476")
+	if got != "acme-widgets-3476" {
+		t.Errorf("jsonRowID() = %q, want %q", got, "acme-widgets-3476")
 	}
 }
 
@@ -247,8 +247,8 @@ func TestExtractRepoName(t *testing.T) {
 		in   interface{}
 		want string
 	}{
-		{"bare string", "butter_stack", "butter_stack"},
-		{"nested name", map[string]interface{}{"name": "butter_stack"}, "butter_stack"},
+		{"bare string", "acme_widgets", "acme_widgets"},
+		{"nested name", map[string]interface{}{"name": "acme_widgets"}, "acme_widgets"},
 		{"nameWithOwner", map[string]interface{}{"nameWithOwner": "org/repo"}, "org/repo"},
 		{"full_name", map[string]interface{}{"full_name": "org/repo"}, "org/repo"},
 		{"prefers nameWithOwner", map[string]interface{}{"name": "repo", "nameWithOwner": "org/repo"}, "org/repo"},
@@ -291,17 +291,17 @@ func TestStringFromJSON(t *testing.T) {
 func TestJSONRowID_FullFlowGitHubPRs(t *testing.T) {
 	rows := []map[string]interface{}{
 		{
-			"repository": map[string]interface{}{"name": "butter_stack"},
+			"repository": map[string]interface{}{"name": "acme_widgets"},
 			"number":     float64(3476),
 			"title":      "Bump web-console",
 		},
 		{
-			"repository": map[string]interface{}{"name": "butter_stack"},
+			"repository": map[string]interface{}{"name": "acme_widgets"},
 			"number":     float64(3480),
 			"title":      "Bump @axe-core/playwright to 4.10.2",
 		},
 		{
-			"repository": map[string]interface{}{"name": "butter_stack"},
+			"repository": map[string]interface{}{"name": "acme_widgets"},
 			"number":     float64(3481),
 			"title":      "Bump @axe-core/playwright to 4.10.3",
 		},
@@ -311,7 +311,7 @@ func TestJSONRowID_FullFlowGitHubPRs(t *testing.T) {
 		artifacts = append(artifacts, Artifact{ID: jsonRowID(row, "", i)})
 	}
 	ensureUniqueIDs(artifacts)
-	want := []string{"butter-stack-3476", "butter-stack-3480", "butter-stack-3481"}
+	want := []string{"acme-widgets-3476", "acme-widgets-3480", "acme-widgets-3481"}
 	for i, a := range artifacts {
 		if a.ID != want[i] {
 			t.Errorf("artifacts[%d].ID = %q, want %q", i, a.ID, want[i])
@@ -326,8 +326,8 @@ func TestPickIDColumn_PrefersMostDistinct(t *testing.T) {
 		{"bucket": "Personal", "category": "Travel", "total_expenses": "801.38"},
 		{"bucket": "Personal", "category": "Food", "total_expenses": "212.88"},
 		{"bucket": "Personal", "category": "Utilities", "total_expenses": "114.11"},
-		{"bucket": "ButterStack", "category": "Technology", "total_expenses": "118.53"},
-		{"bucket": "Camp Butz", "category": "Housing", "total_expenses": "600.00"},
+		{"bucket": "Acme Widgets", "category": "Technology", "total_expenses": "118.53"},
+		{"bucket": "Pine Hollow", "category": "Housing", "total_expenses": "600.00"},
 	}
 	got := pickIDColumn(headers, rows)
 	// category has 5 distinct values, bucket has 3 → should pick category
@@ -368,8 +368,8 @@ func TestSourceResult_FromContextDoc(t *testing.T) {
 func TestFullFlow_FinanceBuckets(t *testing.T) {
 	headers := []string{"month", "bucket", "total_spent"}
 	rows := []map[string]string{
-		{"month": "2026-04", "bucket": "ButterStack", "total_spent": "316.19"},
-		{"month": "2026-04", "bucket": "Camp Butz", "total_spent": "3098.61"},
+		{"month": "2026-04", "bucket": "Acme Widgets", "total_spent": "316.19"},
+		{"month": "2026-04", "bucket": "Pine Hollow", "total_spent": "3098.61"},
 		{"month": "2026-04", "bucket": "Personal", "total_spent": "41289.50"},
 	}
 
@@ -382,7 +382,7 @@ func TestFullFlow_FinanceBuckets(t *testing.T) {
 	}
 	ensureUniqueIDs(artifacts)
 
-	want := []string{"butterstack", "camp-butz", "personal"}
+	want := []string{"acme-widgets", "pine-hollow", "personal"}
 	for i, a := range artifacts {
 		if a.ID != want[i] {
 			t.Errorf("artifacts[%d].ID = %q, want %q", i, a.ID, want[i])

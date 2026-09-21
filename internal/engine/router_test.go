@@ -22,9 +22,9 @@ func routerTestSources() config.Sources {
 			Type:        "codebase",
 			Description: "audio-viewer codebase",
 		},
-		"butter-stack": &config.Source{
+		"acme-widgets": &config.Source{
 			Type:        "claude-project",
-			Description: "Butter stack - Rails app",
+			Description: "Acme Widgets - Rails app",
 		},
 		"csv-viewer": &config.Source{
 			Type:        "codebase",

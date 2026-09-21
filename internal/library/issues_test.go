@@ -7,13 +7,13 @@ import (
 
 func TestLibraryIssue_Format_OneLine(t *testing.T) {
 	iss := LibraryIssue{
-		SourceName: "butterstack-github",
+		SourceName: "acme-widgets-github",
 		Severity:   IssueSeverityError,
 		Type:       IssueTypeRawPassthrough,
 		Reason:     "exec.query is a bare {query} placeholder",
 	}
 	got := iss.Format()
-	for _, want := range []string{"ERROR", "raw-passthrough", "butterstack-github", "bare {query}"} {
+	for _, want := range []string{"ERROR", "raw-passthrough", "acme-widgets-github", "bare {query}"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Format() missing %q: %q", want, got)
 		}
@@ -45,13 +45,13 @@ func TestLibraryIssue_FormatFix_EmptyWhenNoFix(t *testing.T) {
 
 func TestLibraryIssue_AgentContext_StructuredAndIndented(t *testing.T) {
 	iss := LibraryIssue{
-		SourceName: "butterstack-github",
+		SourceName: "acme-widgets-github",
 		Type:       IssueTypeRawPassthrough,
 		Reason:     "exec.query is a bare {query} placeholder",
 		Fix:        "Prepend a real command:\n  exec:\n    query: 'gh pr list {query}'",
 	}
 	got := iss.AgentContext()
-	if !strings.HasPrefix(got, "- butterstack-github") {
+	if !strings.HasPrefix(got, "- acme-widgets-github") {
 		t.Errorf("AgentContext should bullet on source name; got %q", got)
 	}
 	if !strings.Contains(got, "Problem:") {

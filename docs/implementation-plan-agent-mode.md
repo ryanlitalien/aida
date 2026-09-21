@@ -220,9 +220,9 @@ Week 6:    Integration testing, seed eval with agent mode queries
 | Query | Expected Behavior | Phase Required |
 |-------|-------------------|----------------|
 | `aida "checkout errors yesterday"` | Existing pipeline, unchanged | Already works |
-| `aida "search gmail for camp-butz invoice"` | MCP Gmail tool, returns email content | Phase 1 |
+| `aida "search gmail for pine-hollow invoice"` | MCP Gmail tool, returns email content | Phase 1 |
 | `aida "what's the latest Go version?"` | Web search, returns current answer | Phase 1 or 4 |
-| `aida --agent "find errors for camp-butz, check chrono, summarize"` | Agent loop, 3-step investigation | Phase 2 |
+| `aida --agent "find errors for pine-hollow, check chrono, summarize"` | Agent loop, 3-step investigation | Phase 2 |
 | `aida --agent "draft a Slack message about the outage to #incidents"` | Agent loop → Slack MCP tool, confirm before send | Phase 1 + 2 |
-| `aida --agent "fix the timeout bug in butterstack and open a PR"` | Agent loop → delegate to Claude Code → PR URL | Phase 2 + 3 |
+| `aida --agent "fix the timeout bug in acme-widgets and open a PR"` | Agent loop → delegate to Claude Code → PR URL | Phase 2 + 3 |
 | `aida "checkout errors"` (30th time) | Auto-compiled routing wisdom makes it faster | Phase 5 |

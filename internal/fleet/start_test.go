@@ -121,12 +121,12 @@ func TestLauncherArgv(t *testing.T) {
 			user:        "ryan",
 			agentName:   "scarlett-978",
 			claudeAgent: "swe",
-			cwd:         "/home/ryan/dev/butter_stack",
+			cwd:         "/home/ryan/dev/acme_widgets",
 			effort:      "max",
 			model:       "claude-opus-4-6",
 			keepOpen:    0,
 			want: []string{"bash", "-lc",
-				"'/home/ryan/agents-lane4/lane4-run.sh' 'scarlett-978' --agent 'swe' --repo '/home/ryan/dev/butter_stack' --effort 'max' --opus 'claude-opus-4-6'"},
+				"'/home/ryan/agents-lane4/lane4-run.sh' 'scarlett-978' --agent 'swe' --repo '/home/ryan/dev/acme_widgets' --effort 'max' --opus 'claude-opus-4-6'"},
 		},
 		{
 			name:        "with keep-open",
@@ -353,7 +353,7 @@ func TestDefaultQuestion(t *testing.T) {
 // fails if the argv for any of the three calls drifts, not just the
 // call count.
 func TestStartAgent_HappyPath(t *testing.T) {
-	const host, user, cwd, name = "minty", "ryan", "/home/ryan/dev/butter_stack", "scarlett-smoke"
+	const host, user, cwd, name = "minty", "ryan", "/home/ryan/dev/acme_widgets", "scarlett-smoke"
 	launchArgv := LauncherArgv(user, name, "swe", cwd, "max", "claude-opus-4-6", 0)
 
 	listScript := mustScript(t, AgentListArgv())

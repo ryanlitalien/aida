@@ -15,14 +15,14 @@ func TestScopeReviewer_NameIsStable(t *testing.T) {
 
 func TestScopeReviewer_PassWhenScopeInCommand(t *testing.T) {
 	in := ReviewInput{
-		Question: "what are my open PRs in butter-stack?",
+		Question: "what are my open PRs in acme-widgets?",
 		Answer:   "You have 13 open PRs.",
 		Results: []sources.SourceResult{
 			{
 				Source:  "github",
-				Command: "search prs --repo butterstack/butter-stack --state open",
+				Command: "search prs --repo acmewidgets/acme-widgets --state open",
 				Artifacts: []sources.Artifact{
-					{ID: "butterstack-butter-stack-571"},
+					{ID: "acmewidgets-acme-widgets-571"},
 				},
 			},
 		},
@@ -34,10 +34,10 @@ func TestScopeReviewer_PassWhenScopeInCommand(t *testing.T) {
 }
 
 func TestScopeReviewer_WarnsWhenScopeMissing(t *testing.T) {
-	// User asks about Campbutz but the github command was scoped
+	// User asks about Pinehollow but the github command was scoped
 	// elsewhere - classic dropped-filter failure.
 	in := ReviewInput{
-		Question: "what's the latest Campbutz YTD?",
+		Question: "what's the latest Pinehollow YTD?",
 		Answer:   "Various PRs are open.",
 		Results: []sources.SourceResult{
 			{
@@ -50,16 +50,16 @@ func TestScopeReviewer_WarnsWhenScopeMissing(t *testing.T) {
 	if rec.Verdict != VerdictWarn {
 		t.Errorf("Verdict = %q, want warn", rec.Verdict)
 	}
-	// "Campbutz" should be flagged. (YTD is also nounish but only
+	// "Pinehollow" should be flagged. (YTD is also nounish but only
 	// appears once; we don't dedup uppercase - both might show.)
-	foundCampbutz := false
+	foundPinehollow := false
 	for _, iss := range rec.Issues {
-		if iss.Anchor == "campbutz" {
-			foundCampbutz = true
+		if iss.Anchor == "pinehollow" {
+			foundPinehollow = true
 		}
 	}
-	if !foundCampbutz {
-		t.Errorf("expected scope-mismatch issue for campbutz, got %+v", rec.Issues)
+	if !foundPinehollow {
+		t.Errorf("expected scope-mismatch issue for pinehollow, got %+v", rec.Issues)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestScopeReviewer_FreeFormPasses(t *testing.T) {
 func TestScopeReviewer_NoResultsSkipsCheck(t *testing.T) {
 	// No source ran - nothing to compare scope against.
 	in := ReviewInput{
-		Question: "what's in butter-stack?",
+		Question: "what's in acme-widgets?",
 		Answer:   "(empty)",
 		Results:  nil,
 	}
@@ -108,16 +108,16 @@ func TestScopeReviewer_NoResultsSkipsCheck(t *testing.T) {
 
 func TestScopeReviewer_MatchesAcrossArtifactIDs(t *testing.T) {
 	// Token doesn't appear in command but does appear in artifact
-	// IDs - should still pass. butter_stack → butterstack-butter-stack-571
+	// IDs - should still pass. acme_widgets → acmewidgets-acme-widgets-571
 	in := ReviewInput{
-		Question: "what's in butter-stack?",
+		Question: "what's in acme-widgets?",
 		Answer:   "13 PRs.",
 		Results: []sources.SourceResult{
 			{
 				Source:  "github",
 				Command: "search prs --repo X/Y --state open",
 				Artifacts: []sources.Artifact{
-					{ID: "butterstack-butter-stack-571"},
+					{ID: "acmewidgets-acme-widgets-571"},
 				},
 			},
 		},

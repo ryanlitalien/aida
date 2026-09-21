@@ -225,7 +225,7 @@ These are validated by industry consensus across all sources:
 
 **Excludes from MCP discovery:** The `aida` server itself (aida already has direct Go access to its own brain/tasks).
 
-**Test:** `aida "search my gmail for emails from camp-butz"` → routes to Gmail MCP tool → returns results.
+**Test:** `aida "search my gmail for emails from pine-hollow"` → routes to Gmail MCP tool → returns results.
 
 ---
 
@@ -260,7 +260,7 @@ These are validated by industry consensus across all sources:
    - Agent track: classifier picks agent → agent loop with full tool access
    - Hybrid: agent loop can call aida's own pipeline as a tool ("run a structured query against Snowflake")
 
-**Test:** `aida --agent "find checkout errors for camp-butz in the last hour, check if there was a recent deploy, and draft a Slack message to the team"` → multi-step execution with intermediate results visible in verbose mode.
+**Test:** `aida --agent "find checkout errors for pine-hollow in the last hour, check if there was a recent deploy, and draft a Slack message to the team"` → multi-step execution with intermediate results visible in verbose mode.
 
 ---
 
@@ -283,7 +283,7 @@ These are validated by industry consensus across all sources:
    - If Claude Agent SDK gets a Go binding, use it directly
    - Until then, shell out to `claude --print` with structured prompts
 
-**Test:** `aida --agent "add a dark mode toggle to butterstack"` → aida decomposes → delegates to Claude Code in `~/dev/butterstack/` → returns diff + PR URL.
+**Test:** `aida --agent "add a dark mode toggle to acme-widgets"` → aida decomposes → delegates to Claude Code in `~/dev/acme-widgets/` → returns diff + PR URL.
 
 ---
 
@@ -351,20 +351,20 @@ aida "what happened with checkout errors yesterday?"
 
 **After Phase 1+2 (~60%):**
 ```
-aida "search my gmail for the camp-butz invoice and add it to my expenses"
-→ agent loop → Gmail MCP search → CSV append → "Done. Added $4,200 invoice from Camp Butz to April expenses."
+aida "search my gmail for the pine-hollow invoice and add it to my expenses"
+→ agent loop → Gmail MCP search → CSV append → "Done. Added $4,200 invoice from Pine Hollow Campground to April expenses."
 ```
 
 **After Phase 3 (~70%):**
 ```
-aida --agent "fix the checkout timeout bug in butterstack and open a PR"
+aida --agent "fix the checkout timeout bug in acme-widgets and open a PR"
 → agent loop → investigate (Snowflake + Chrono) → delegate to Claude Code → PR created → "PR #42 opened: fixes checkout timeout by increasing retry window."
 ```
 
 **After Phase 5 (~75%):**
 ```
-aida "checkout errors for camp-butz"
-→ routing hint from compiled wisdom: "camp-butz checkout errors → route to [snowflake, chrono], filter by partner_ari"
+aida "checkout errors for pine-hollow"
+→ routing hint from compiled wisdom: "pine-hollow checkout errors → route to [snowflake, chrono], filter by partner_ari"
 → faster, more accurate, zero manual tuning
 ```
 

@@ -81,7 +81,7 @@ func TestCompletePreservesAgentModelAndArtifactURL(t *testing.T) {
 	if err := store.Complete(j.RunID); err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	prURL := "https://github.com/ButterStack/butter_stack/pull/1617"
+	prURL := "https://github.com/AcmeWidgets/acme_widgets/pull/1617"
 	if err := store.SetArtifactURL(j.RunID, prURL); err != nil {
 		t.Fatalf("SetArtifactURL: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestSetArtifactURLSurvivesEitherOrderAroundComplete(t *testing.T) {
 		t.Fatalf("MarkRunning: %v", err)
 	}
 
-	prURL := "https://github.com/ButterStack/butter_stack/pull/1617"
+	prURL := "https://github.com/AcmeWidgets/acme_widgets/pull/1617"
 	// SetArtifactURL BEFORE Complete this time.
 	if err := store.SetArtifactURL(j.RunID, prURL); err != nil {
 		t.Fatalf("SetArtifactURL: %v", err)
@@ -187,7 +187,7 @@ func TestCompleteThenMarkNotifiedKeepsArtifactURL(t *testing.T) {
 	if err := store.Complete(j.RunID); err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	prURL := "https://github.com/ButterStack/butter_stack/pull/1617"
+	prURL := "https://github.com/AcmeWidgets/acme_widgets/pull/1617"
 	if err := store.SetArtifactURL(j.RunID, prURL); err != nil {
 		t.Fatalf("SetArtifactURL: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestSetDestinationSurvivesCompleteAndMarkNotified(t *testing.T) {
 
 	dest := &Destination{
 		Type:         DestinationTypeGitHubPR,
-		Repo:         "ryanlitalien/butter_stack",
+		Repo:         "ryanlitalien/acme_widgets",
 		BranchPrefix: "aida/",
 	}
 	if err := store.SetDestination(j.RunID, dest); err != nil {

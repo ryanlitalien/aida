@@ -143,11 +143,11 @@ func TestResolve_EmptyRef(t *testing.T) {
 
 func TestNormalizeName(t *testing.T) {
 	cases := map[string]string{
-		"Butter Stack":  "butterstack",
-		"butter-stack":  "butterstack",
-		"butter_stack":  "butterstack",
-		"butter.stack":  "butterstack",
-		"ButterStack":   "butterstack",
+		"Acme Widgets":  "acmewidgets",
+		"acme-widgets":  "acmewidgets",
+		"acme_widgets":  "acmewidgets",
+		"acme.widgets":  "acmewidgets",
+		"AcmeWidgets":   "acmewidgets",
 		"  spaced out ": "spacedout",
 	}
 	for in, want := range cases {

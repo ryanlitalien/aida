@@ -160,7 +160,7 @@ a fast sync-down rather than a rebuild.
    authored source (likely `soul.yaml` / brain `instruction` pages) and let the `CLAUDE.md`
    preference block be a *generated projection* of it, so personality is not maintained in
    two files that drift. (They already differ: `soul.yaml` centers a former employer's
-   day-job identity; `CLAUDE.md` is ButterStack-scoped.)
+   day-job identity; `CLAUDE.md` is Acme Widgets-scoped.)
    **Resolved (shipped):** `soul.yaml` is the authored source; `aida brain project-soul`
    splices a generated, managed block into `~/.claude/CLAUDE.md`.
 4. **Skills duplication.** Aida has `library`/`skill`; Claude Code has `skills/`. Decide

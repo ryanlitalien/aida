@@ -17,7 +17,7 @@ import (
 //
 // What it catches in v1:
 //   - Question contains a multi-word/hyphenated/CamelCase token
-//     (e.g. "butterstack", "butter-stack", "Citi Connect") that
+//     (e.g. "acmewidgets", "acme-widgets", "Citi Connect") that
 //     doesn't appear in any source's actual Command.
 //   - Surfaces every offending token so the router-boost
 //     mechanism can demote sources that consistently lose scope.
@@ -37,9 +37,9 @@ func NewScopeReviewer() *ScopeReviewer { return &ScopeReviewer{} }
 func (ScopeReviewer) Name() string { return "scope" }
 
 // scopeTokenPattern matches "named-thing" tokens in a question:
-//   - hyphenated lowercase (butter-stack)
-//   - CamelCase (ButterStack, MyProject)
-//   - Capitalized standalone (Campbutz)
+//   - hyphenated lowercase (acme-widgets)
+//   - CamelCase (AcmeWidgets, MyProject)
+//   - Capitalized standalone (Pinehollow)
 //   - all-caps abbreviations 2+ chars (NYT, GMV) - note: must
 //     come AFTER the more specific patterns or it'll greedy-match
 //
@@ -121,8 +121,8 @@ func (ScopeReviewer) Review(ctx context.Context, in ReviewInput) (*ReviewRecord,
 	// Concatenate every command + (where present) the result
 	// summary and the artifact ids so a token captured in an
 	// artifact path also counts as "in scope" - handles cases
-	// like "show me PRs in butter_stack" where butter_stack
-	// appears as butterstack-butter-stack-571 in artifact ids.
+	// like "show me PRs in acme_widgets" where acme_widgets
+	// appears as acmewidgets-acme-widgets-571 in artifact ids.
 	var pool strings.Builder
 	for _, r := range in.Results {
 		pool.WriteString(r.Command)

@@ -1385,8 +1385,8 @@ Two proposal *kinds*, both derived from the same scan loop `runBrainAnalyze` alr
 ```
 # proposed: snowflake recurs as missing-source 6x over last 50 runs (+25 router prior)
 # source: ~/.aida/library/sources/snowflake.yaml
-- entities: [camp-butz, first-chair]
-+ entities: [camp-butz, first-chair, gmv]   # ← drafted from the failed questions
+- entities: [pine-hollow, first-chair]
++ entities: [pine-hollow, first-chair, gmv]   # ← drafted from the failed questions
 ```
 
 Routing boosts are a *deterministic* mine - `FailureBoosts` is already the production router path (`brain.RecentFailedReviewsForEntities` → `FailureBoosts` feeds the LLM router's `±50`). Phase 7 just makes the recurring ones durable as config rather than re-derived per query.
@@ -1401,7 +1401,7 @@ Routing boosts are a *deterministic* mine - `FailureBoosts` is already the produ
 ```yaml
 # proposed golden query (from failed run 20260615-091233-ab12)
 - id: auto-snowflake-missing-source-ab12
-  question: "what's camp-butz's GMV last quarter"
+  question: "what's pine-hollow's GMV last quarter"
   expected:
     sources_must_include: [snowflake]
     judge: "answer cites a dollar GMV figure grounded in snowflake source data"

@@ -112,11 +112,11 @@ func TestCitationReviewer_NoCitationsIsPass(t *testing.T) {
 
 func TestCitationReviewer_HandlesIDsWithDotsAndDashes(t *testing.T) {
 	// aida artifact IDs commonly contain '.' '/' '_' '-' (see
-	// e.g. butterstack-butter-stack-571 in real run output).
+	// e.g. acmewidgets-acme-widgets-571 in real run output).
 	in := ReviewInput{
-		Answer: "result (github: butterstack-butter-stack-571) and (snowflake: rows.2026-04-30.001)",
+		Answer: "result (github: acmewidgets-acme-widgets-571) and (snowflake: rows.2026-04-30.001)",
 		Results: []sources.SourceResult{
-			mkResult("github", "butterstack-butter-stack-571"),
+			mkResult("github", "acmewidgets-acme-widgets-571"),
 			mkResult("snowflake", "rows.2026-04-30.001"),
 		},
 	}
