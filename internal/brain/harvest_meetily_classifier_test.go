@@ -64,13 +64,13 @@ func TestHarvestMeetily_ClassifierTagsFlowIntoCallJSONAndRecords(t *testing.T) {
 		[]string{"We agreed to launch the CTA practice next month."},
 		"Discussed CTA practice launch.", "CTA Practice Launch")
 
-	vocabulary := []string{"cta", "butterstack"}
+	vocabulary := []string{"cta", "acme-widgets"}
 	distill := fakeMeetilyClassifierDistill(meetilyClassifierFakeResponse{
 		Memories: []meetilyClassifierMemory{
 			{Name: "cta-practice-launch", Description: "d", Type: "event", Body: "Agreed to launch the CTA practice."},
 		},
 		Tags:          []string{"cta", "not-in-vocabulary"},
-		Participants:  []string{"Thor Odinson", "Kevin"},
+		Participants:  []string{"Thor Odinson", "Ralph"},
 		ActionItems:   []string{"Send the proposal by Friday"},
 		KeyPoints:     []string{"Agreed to launch the CTA practice next month"},
 		IsNewCategory: false,
@@ -164,7 +164,7 @@ func TestHarvestMeetily_NewCategoryTagsAndCreatesReviewTask(t *testing.T) {
 	b := newTestBrain(t)
 	ctx := context.Background()
 
-	result, err := b.harvestMeetily(ctx, root, distill, []string{"cta", "butterstack"}, HarvestOptions{Now: mustParseTime(t, "2026-08-25T12:00:00Z")})
+	result, err := b.harvestMeetily(ctx, root, distill, []string{"cta", "acme-widgets"}, HarvestOptions{Now: mustParseTime(t, "2026-08-25T12:00:00Z")})
 	if err != nil {
 		t.Fatalf("harvestMeetily: %v", err)
 	}

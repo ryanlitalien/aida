@@ -745,7 +745,7 @@ func hostnameForClaim() string {
 //     other path metacharacters. A title like "rake file/demo control
 //     tool" produced a slug containing `/`, which made WriteExecPlan
 //     try to create a subdirectory and silently lose the plan
-//     (observed in the live butterstack v2 ingest: "15 tasks, 14
+//     (observed in the live acme-widgets v2 ingest: "15 tasks, 14
 //     plans"). slugifyForPlan now keeps only [a-z0-9] from the
 //     normalized slug so any character that looks like a path
 //     separator OR a shell metacharacter is dropped.

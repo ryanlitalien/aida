@@ -422,10 +422,10 @@ func TestListEntitySlugs(t *testing.T) {
 		t.Errorf("expected no slugs before any entity is upserted, got %v", empty)
 	}
 
-	if err := db.UpsertEntity(&EntityRecord{Slug: "butterstack", Type: "tools", Name: "ButterStack"}); err != nil {
+	if err := db.UpsertEntity(&EntityRecord{Slug: "acme-widgets", Type: "tools", Name: "Acme Widgets"}); err != nil {
 		t.Fatalf("UpsertEntity: %v", err)
 	}
-	if err := db.UpsertEntity(&EntityRecord{Slug: "kevin", Type: "people", Name: "Kevin"}); err != nil {
+	if err := db.UpsertEntity(&EntityRecord{Slug: "ralph", Type: "people", Name: "Ralph"}); err != nil {
 		t.Fatalf("UpsertEntity: %v", err)
 	}
 
@@ -433,7 +433,7 @@ func TestListEntitySlugs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListEntitySlugs: %v", err)
 	}
-	want := map[string]bool{"butterstack": true, "kevin": true}
+	want := map[string]bool{"acme-widgets": true, "ralph": true}
 	if len(slugs) != len(want) {
 		t.Fatalf("ListEntitySlugs = %v, want %v", slugs, want)
 	}

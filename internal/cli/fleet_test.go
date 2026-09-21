@@ -45,7 +45,7 @@ func TestPollUntilExit_NoExitLineYetTimesOut(t *testing.T) {
 
 func TestPollUntilExit_Exit0WithPRURL(t *testing.T) {
 	log := "Tracer bullet done.\n\n" +
-		"PR: https://github.com/ButterStack/butter_stack/pull/1617\n\n" +
+		"PR: https://github.com/AcmeWidgets/acme_widgets/pull/1617\n\n" +
 		"Tests green.\n" +
 		"EXIT=0 2026-09-02T16:06:39-04:00\n"
 	fake := &remotex.FakeRunner{Respond: []remotex.FakeRule{
@@ -65,7 +65,7 @@ func TestPollUntilExit_Exit0WithPRURL(t *testing.T) {
 	if result.Timestamp != "2026-09-02T16:06:39-04:00" {
 		t.Errorf("Timestamp = %q, want 2026-09-02T16:06:39-04:00", result.Timestamp)
 	}
-	want := "https://github.com/ButterStack/butter_stack/pull/1617"
+	want := "https://github.com/AcmeWidgets/acme_widgets/pull/1617"
 	if result.PRURL != want {
 		t.Errorf("PRURL = %q, want %q", result.PRURL, want)
 	}

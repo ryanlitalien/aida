@@ -20,7 +20,7 @@ func TestManifestDestinationRoundTrip(t *testing.T) {
 		EnqueuedAt: "2026-05-11T12:00:00Z",
 		Destination: &Destination{
 			Type:         DestinationTypeGitHubPR,
-			Repo:         "ryanlitalien/butter_stack",
+			Repo:         "ryanlitalien/acme_widgets",
 			BranchPrefix: "aida/",
 		},
 	}
@@ -38,7 +38,7 @@ func TestManifestDestinationRoundTrip(t *testing.T) {
 	if got.Destination.Type != DestinationTypeGitHubPR {
 		t.Errorf("type: want %q got %q", DestinationTypeGitHubPR, got.Destination.Type)
 	}
-	if got.Destination.Repo != "ryanlitalien/butter_stack" {
+	if got.Destination.Repo != "ryanlitalien/acme_widgets" {
 		t.Errorf("repo: got %q", got.Destination.Repo)
 	}
 	if got.Destination.BranchPrefix != "aida/" {
@@ -99,7 +99,7 @@ func TestSetArtifactURL(t *testing.T) {
 		t.Fatalf("Enqueue: %v", err)
 	}
 
-	prURL := "https://github.com/ryanlitalien/butter_stack/pull/42"
+	prURL := "https://github.com/ryanlitalien/acme_widgets/pull/42"
 	if err := store.SetArtifactURL(j.RunID, prURL); err != nil {
 		t.Fatalf("SetArtifactURL: %v", err)
 	}

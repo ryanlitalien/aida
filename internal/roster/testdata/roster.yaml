@@ -6,13 +6,13 @@ entries:
     description: Chief of staff and front door.
     profiles: []
 
-  butterstack-team:
+  acme-widgets-team:
     kind: subagent
     discover: testdata/agents
     call_signs_from: testdata/org-chart.md
     profiles: [work]
     subagent:
-      dir: testdata/butterstack-stub
+      dir: testdata/acme-widgets-stub
 
   # Hand-authored override: same Name as the discovered "product-manager"
   # persona above, used to pin aliases the frontmatter cannot express.
@@ -23,7 +23,7 @@ entries:
     description: Hand-authored override pinning aliases the frontmatter can't express.
     profiles: [work]
     subagent:
-      dir: testdata/butterstack-stub
+      dir: testdata/acme-widgets-stub
       agent: product-manager
       model: sonnet
 

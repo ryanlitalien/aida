@@ -1,4 +1,4 @@
-# ButterStack org chart (test snippet)
+# Acme Widgets org chart (test snippet)
 
 - **Pamela** (product-manager) - Product Manager, backlog & roadmap
 - **Devin** (devops) - DevOps, infra & on-call

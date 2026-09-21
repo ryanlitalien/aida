@@ -8,7 +8,7 @@ import (
 
 func TestAnswerIsUseless(t *testing.T) {
 	useless := []string{
-		"I don't have access to information about what you ate today (source: butter-stack subagent-response).",
+		"I don't have access to information about what you ate today (source: acme-widgets subagent-response).",
 		"I do not have access to your weight data.",
 		"I cannot find any matches for that query in the available sources.",
 		"I cannot answer your question about csv-viewer because the data source returned an error.",

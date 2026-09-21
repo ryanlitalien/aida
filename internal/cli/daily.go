@@ -49,7 +49,7 @@ func newDailyCmd() *cobra.Command {
 			}
 			dc := profile.Daily
 
-			// Briefing pipeline selector: "gws" (pure-Go + butterstack gws CLI) or
+			// Briefing pipeline selector: "gws" (pure-Go + the gws CLI) or
 			// "" / "claude" (legacy claude -p + MCP). Notion backup always
 			// runs through claude -p regardless.
 			if !notionBackup && dc.Pipeline == "gws" {

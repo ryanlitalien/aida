@@ -230,7 +230,7 @@ func scoreQuality(ctx context.Context, client *llm.Client, question, answer stri
 // the user's original scope filters (--repo, entity names). Without this,
 // the LLM historically rewrote the whole query under generic "try a
 // different approach" guidance and dropped the scope - e.g. turning a
-// butter_stack-scoped query into `search prs --owner ryanlitalien`,
+// acme_widgets-scoped query into `search prs --owner ryanlitalien`,
 // which confidently returned 30 off-topic PRs.
 func buildReExecutionGuidance(qa *QualityAssessment, results []sources.SourceResult) string {
 	var parts []string

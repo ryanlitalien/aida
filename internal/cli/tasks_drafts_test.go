@@ -119,17 +119,17 @@ Second draft body.
 }
 
 func TestPlanMatchesTags_AndAcrossFilters(t *testing.T) {
-	tags := []string{"butterstack", "owner:Aida", "p2"}
+	tags := []string{"acme-widgets", "owner:Aida", "p2"}
 	cases := []struct {
 		name    string
 		filters []string
 		want    bool
 	}{
 		{"no filters → match", nil, true},
-		{"single match", []string{"butterstack"}, true},
-		{"both match (AND)", []string{"butterstack", "Aida"}, true},
-		{"one fails", []string{"butterstack", "missing"}, false},
-		{"substring works", []string{"butter"}, true},
+		{"single match", []string{"acme-widgets"}, true},
+		{"both match (AND)", []string{"acme-widgets", "Aida"}, true},
+		{"one fails", []string{"acme-widgets", "missing"}, false},
+		{"substring works", []string{"acme"}, true},
 		{"case insensitive", []string{"AIDA"}, true},
 	}
 	for _, c := range cases {
@@ -161,7 +161,7 @@ func TestRunTasksDrafts_FilterCompositionShape(t *testing.T) {
 	// folded into the tag filter set as expected by the docs.
 	opts := tasksDraftsOpts{
 		SourceHash: "abc123",
-		Tags:       []string{"butterstack"},
+		Tags:       []string{"acme-widgets"},
 	}
 	tagFilters := append([]string(nil), opts.Tags...)
 	if opts.SourceHash != "" {

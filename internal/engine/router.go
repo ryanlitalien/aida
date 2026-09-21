@@ -62,7 +62,7 @@ Return JSON with four fields:
 - none_viable: true only if NOT ONE of the candidate sources could plausibly answer the question; omit or set false otherwise
 
 Picking rules (in priority order):
-1. LITERAL NAME OVERRIDE (HIGHEST PRIORITY): If the question text contains any source's exact name or slug from the list above (e.g. "csv-viewer", "mcp-perforce", "thrive", "GeminiWatermarkTool", "camp-butz", "nytimes"), pick THAT source. The user named the source explicitly - that intent ALWAYS wins over past learning, fit scoring, and the web-search default. Past lessons that picked a different source for similar questions DO NOT override this - the user's explicit naming is the strongest signal possible. Only fall through if no listed source's name appears in the question. EXCEPTION: if the question is about GitHub concepts (issues, pull requests, PRs, repos, stars, forks), ALWAYS prefer the "github" source even if other source names appear in the question - the user is asking about the project's GitHub presence, not searching its code.
+1. LITERAL NAME OVERRIDE (HIGHEST PRIORITY): If the question text contains any source's exact name or slug from the list above (e.g. "csv-viewer", "mcp-perforce", "thrive", "GeminiWatermarkTool", "pine-hollow", "nytimes"), pick THAT source. The user named the source explicitly - that intent ALWAYS wins over past learning, fit scoring, and the web-search default. Past lessons that picked a different source for similar questions DO NOT override this - the user's explicit naming is the strongest signal possible. Only fall through if no listed source's name appears in the question. EXCEPTION: if the question is about GitHub concepts (issues, pull requests, PRs, repos, stars, forks), ALWAYS prefer the "github" source even if other source names appear in the question - the user is asking about the project's GitHub presence, not searching its code.
 2. If a past learning entry has thumbs-down for a source on a similar question, AVOID that source.
 3. If a past learning entry has thumbs-up or success for a source on a similar question, PREFER that source - UNLESS rule 1 applies (the user named a different source explicitly).
 4. Otherwise pick by best fit between the question's intent and each source's description, capabilities, and topics.
@@ -153,7 +153,7 @@ func addNameMatchedDescriptors(
 			if normEnt == normName && !isGenericNameToken(normEnt) {
 				matched = true
 			}
-			// Compact match: "butterstack" == "butter-stack".
+			// Compact match: "acmewidgets" == "acme-widgets".
 			if !matched && compactToken(normEnt) == compactToken(normName) && !isGenericNameToken(normEnt) {
 				matched = true
 			}

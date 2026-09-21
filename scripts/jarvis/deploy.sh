@@ -4,8 +4,8 @@
 #   usage: ~/dev/aida/scripts/jarvis/deploy.sh
 set -euo pipefail
 
-# Status: the kevin -> aida rename deploy to photon COMPLETED 2026-07-20.
-# photon runs ~/.local/bin/aida with config in ~/.aida; the old kvn/hm
+# Status: the rename deploy (old assistant binaries -> aida) to photon COMPLETED 2026-07-20.
+# photon runs ~/.local/bin/aida with config in ~/.aida; the old
 # binaries are gone.
 #
 # Cast is NOT in mainline. It merged as 03333e4 (2026-07-06) and was

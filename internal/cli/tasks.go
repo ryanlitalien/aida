@@ -19,7 +19,7 @@ import (
 )
 
 // normalizeName strips all common separators and lowercases for fuzzy matching.
-// e.g. "butter_stack", "butter-stack", "ButterStack", "butter.stack" all become "butterstack".
+// e.g. "acme_widgets", "acme-widgets", "AcmeWidgets", "acme.widgets" all become "acmewidgets".
 func normalizeName(s string) string {
 	s = strings.ToLower(s)
 	for _, sep := range []string{"-", "_", ".", " "} {
@@ -681,8 +681,8 @@ func HandleTaskIntent(intent *engine.Intent, cfg *config.Config, profileName str
 			return true
 		}
 		// Auto-generate project tags from parsed entities matching library sources.
-		// When multiple sources match (e.g., "butterstack" matches both
-		// "butter-stack" and "butter-stack-dependabot"), prefer the closest
+		// When multiple sources match (e.g., "acmewidgets" matches both
+		// "acme-widgets" and "acme-widgets-dependabot"), prefer the closest
 		// name length (shortest match wins).
 		var tags []string
 		srcs, _, _ := resolveSources()

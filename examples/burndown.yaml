@@ -29,7 +29,7 @@ floors:
       7d: {daytime: 30, last_24h_before_reset: 0, note: "weekly reset Fridays about 2pm ET per the 2026-09-11 probe"}
       7d-fable: {daytime: 50, overnight: 50, hard_floor: 50, note: "Fable is Ryan's interactive model; burn-down never takes it below half, any day"}
   anthropic-pro-bs:
-    provider: "Anthropic / Claude Pro (ButterStack)"
+    provider: "Anthropic / Claude Pro (Acme Widgets)"
     windows:
       5h: {daytime: 20, overnight: 0}
       7d: {daytime: 15, last_24h_before_reset: 0, note: "agent account; weekly reset Wednesdays about 4am ET"}
@@ -48,7 +48,7 @@ floors:
   litellm-keys:
     provider: "LiteLLM proxy (minty)"
     monthly: {floor_usd: 2, note: "minty-fleet and heimdall $10/30d keys; keep $2 for Jarvis and browser jobs"}
-  bedrock-butterstack:
+  bedrock-acme-widgets:
     # No live provider entry in ~/.aida/models.yaml yet (no Bedrock probe
     # wired up) -- kept here so it starts matching the moment one is added.
     monthly: {floor_usd: 15, note: "company money; a co-founder's agent runs share it"}

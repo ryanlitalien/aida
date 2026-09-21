@@ -67,7 +67,7 @@ For each question, provide the expected answer (what a correct response should s
 
 Return a JSON array. Example:
 [
-  {"question": "Which of my projects use Docker?", "answer": "butter-stack (Docker Compose), perforce-docker (containerized P4)", "confidence": "routing-test"}
+  {"question": "Which of my projects use Docker?", "answer": "acme-widgets (Docker Compose), perforce-docker (containerized P4)", "confidence": "routing-test"}
 ]`
 
 type seedQA struct {

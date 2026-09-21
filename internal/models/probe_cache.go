@@ -53,7 +53,7 @@ func probeTTLFor(probeKind string) time.Duration {
 // daemons) memory of the most recent successful Usage per provider name.
 // Keyed by Provider.Name, not Provider.Probe -- two providers can share a
 // probe kind (both Claude accounts probe "claude-oauth") but never a
-// name, so this map can't conflate the personal and ButterStack accounts.
+// name, so this map can't conflate the personal and Acme Widgets accounts.
 var lastGood = struct {
 	mu sync.Mutex
 	m  map[string]Usage
@@ -135,7 +135,7 @@ func withLastGoodFallback(name string, u Usage) Usage {
 // claudeStaggerDelay is the minimum gap ProbeWithOptions enforces between
 // two claude-oauth providers' outbound calls to
 // api.anthropic.com/api/oauth/usage within the same probe round, so both
-// Claude accounts (the personal Max login and the ButterStack Pro login)
+// Claude accounts (the personal Max login and the Acme Widgets Pro login)
 // never hit the endpoint in the same instant and trip its per-token rate
 // limit together.
 const claudeStaggerDelay = 1500 * time.Millisecond

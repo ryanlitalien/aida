@@ -78,7 +78,7 @@ func newTasksDraftsCmd() *cobra.Command {
 			"--include-abandoned widens to all three lifecycle buckets.\n\n" +
 			"Examples:\n" +
 			"  aida tasks drafts --source-hash 9eb5b1212d27\n" +
-			"  aida tasks drafts --tag butterstack\n" +
+			"  aida tasks drafts --tag acme-widgets\n" +
 			"  aida tasks drafts --since 2026-05-01 --include-failed",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts := tasksDraftsOpts{

@@ -151,7 +151,7 @@ Stripe's Minions are the strongest proof point. They are explicitly one-shot, an
 Keep `aida` as one-shot for the 90% case. Add a lightweight **`aida session`** mode for the 10% case:
 
 ```
-aida session "investigate checkout failures for camp-butz"
+aida session "investigate checkout failures for pine-hollow"
 ```
 
 This would:
@@ -199,7 +199,7 @@ Each Claude Code instance has project-scoped memory. Aida has lessons.jsonl but 
 │                                                               │
 │  entities/            knowledge/          meta/               │
 │  ├── partners/        ├── routing/        ├── soul.yaml       │
-│  │   ├── camp-butz.md   │   └── compiled.md │  └── sync.yaml    │
+│  │   ├── pine-hollow.md   │   └── compiled.md │  └── sync.yaml    │
 │  │   └── shopify.md   ├── patterns/       │                   │
 │  ├── tools/           │   └── checkout    │                   │
 │  │   ├── snow.md      │       -debug.md   │                   │
@@ -260,7 +260,7 @@ Human-readable, version-controlled, editable. This is what Claude Code reads dir
 ├── RESOLVER.md                     # Decision tree: "where does this info go?"
 ├── entities/
 │   ├── partners/                   # One page per partner
-│   │   ├── camp-butz.md
+│   │   ├── pine-hollow.md
 │   │   └── shopify.md
 │   ├── tools/                      # One page per tool/source
 │   │   ├── snowflake.md
@@ -302,7 +302,7 @@ Human-readable, version-controlled, editable. This is what Claude Code reads dir
   "id": "2026-04-11T14-32-00-a3f2",
   "ts": "2026-04-11T14:32:00Z",
   "profile": "work",
-  "question": "why are checkout failures spiking for camp-butz?",
+  "question": "why are checkout failures spiking for pine-hollow?",
   "action": "investigate",
   "strategy": "investigate",
   "sources": ["chronosphere", "snowflake"],
@@ -434,7 +434,7 @@ CREATE VIRTUAL TABLE lessons_vec USING vec0(
 Aida reads from the brain at query time and writes back after each execution:
 
 ```
-aida "why are checkout failures spiking for camp-butz?"
+aida "why are checkout failures spiking for pine-hollow?"
   │
   ├─ 1. SEMANTIC SEARCH (brain.db)
   │    SELECT * FROM lessons l
@@ -446,11 +446,11 @@ aida "why are checkout failures spiking for camp-butz?"
   │
   ├─ 2. ENTITY LOOKUP (brain.db)
   │    SELECT * FROM entities
-  │    WHERE 'camp-butz' IN (SELECT value FROM json_each(aliases))
-  │    → Finds camp-butz.md brain page
+  │    WHERE 'pine-hollow' IN (SELECT value FROM json_each(aliases))
+  │    → Finds pine-hollow.md brain page
   │
   ├─ 3. LOAD CONTEXT (markdown files)
-  │    Read brain/entities/partners/camp-butz.md  (compiled truth)
+  │    Read brain/entities/partners/pine-hollow.md  (compiled truth)
   │    Read brain/knowledge/routing/compiled.md    (routing wisdom)
   │    → Rich context feeds LLM router (step 4.5)
   │
@@ -459,7 +459,7 @@ aida "why are checkout failures spiking for camp-butz?"
   │
   └─ 5. WRITE BACK
        INSERT INTO lessons (...) → brain.db
-       Append evidence line → brain/entities/partners/camp-butz.md
+       Append evidence line → brain/entities/partners/pine-hollow.md
        Append evidence line → brain/entities/tools/snowflake.md
        (git commit + sync in background, non-blocking)
 ```
@@ -924,7 +924,7 @@ Decisions and details needed to one-shot implement Phase 1 and Phase 2.
 POST https://api.voyageai.com/v1/embeddings
 {
   "model": "voyage-3-lite",
-  "input": ["why are checkout failures spiking for camp-butz?"],
+  "input": ["why are checkout failures spiking for pine-hollow?"],
   "input_type": "query"    // or "document" for stored lessons
 }
 → { "data": [{ "embedding": [0.23, -0.11, 0.87, ...] }] }

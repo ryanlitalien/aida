@@ -17,7 +17,7 @@ const cannedLiteLLMKeyListJSON = `{
       "models": ["claude-opus-5", "claude-sonnet-5"]
     },
     {
-      "key_alias": "butterstack",
+      "key_alias": "acme-widgets",
       "spend": 0,
       "max_budget": null,
       "budget_reset_at": "",

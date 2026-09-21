@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.9.0
+
+- Scrubbed the personal and private nouns that test fixtures, testdata, doc examples, prompt examples, and code comments had been using as stand-ins: a real campground business is now the fictional Pine Hollow Campground (slug `pine-hollow`), a real company and its GitHub org/repo are now the Acme Widgets family (`acme-widgets`, `acme_widgets`, `acmewidgets`), and a real first name is now Ralph. Fixtures that exercise slug splitting, token compaction, and artifact-id matching keep the same two-word hyphenated shape so those tests still cover what they did. No behavior change: the `aida fleet start` `--cwd` default, the whisper vocabulary prompt, and the live golden query suite are untouched because they must match the machine they run on.
+
 ## v1.8.0
 
 - Removed the last references to a specific third-party Claude Code hook manager from the repo. The additive-merge behavior is unchanged - `aida setup` still merges its harvest hooks into `~/.codex/hooks.json` and `~/.gemini/settings.json` so anything another tool already wrote survives byte-for-byte, and still refuses to write `~/.claude/settings.json` at all - but the comments, docs, and test fixtures now describe that tool generically instead of by name, and the merge tests simulate a fictional "othertool" rather than a real product.

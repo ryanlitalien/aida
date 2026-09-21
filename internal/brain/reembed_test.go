@@ -53,13 +53,13 @@ func newReembedTestBrain(t *testing.T) *Brain {
 
 	if err := db.InsertLesson(&LessonRecord{
 		ID: "lesson-1", Timestamp: "2026-01-01T00:00:00Z", Profile: "work",
-		Question: "what is our GMV for camp-butz", Embedding: staleVector(),
+		Question: "what is our GMV for pine-hollow", Embedding: staleVector(),
 	}); err != nil {
 		t.Fatalf("seed lesson: %v", err)
 	}
 	if err := db.UpsertEntity(&EntityRecord{
-		Slug: "camp-butz", Type: "partner", Name: "Camp Butz",
-		Summary: "Camp Butz is a campground business.", Embedding: staleVector(),
+		Slug: "pine-hollow", Type: "partner", Name: "Pine Hollow Campground",
+		Summary: "Pine Hollow Campground is a seasonal campground.", Embedding: staleVector(),
 	}); err != nil {
 		t.Fatalf("seed entity: %v", err)
 	}
@@ -69,8 +69,8 @@ func newReembedTestBrain(t *testing.T) *Brain {
 	}); err != nil {
 		t.Fatalf("seed memory: %v", err)
 	}
-	if err := db.UpsertWikiPage("wiki-1", "Camp Butz", "wiki/entities/camp-butz.md",
-		"Camp Butz body text.", staleVector(), "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"); err != nil {
+	if err := db.UpsertWikiPage("wiki-1", "Pine Hollow Campground", "wiki/entities/pine-hollow.md",
+		"Pine Hollow Campground body text.", staleVector(), "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"); err != nil {
 		t.Fatalf("seed wiki page: %v", err)
 	}
 	if err := db.InsertJarvisLesson(&JarvisLesson{
@@ -81,7 +81,7 @@ func newReembedTestBrain(t *testing.T) *Brain {
 		t.Fatalf("seed jarvis lesson: %v", err)
 	}
 	if err := db.InsertRunCache(&RunCacheRecord{
-		ID: "rc-1", Profile: "work", Question: "what is camp-butz gmv",
+		ID: "rc-1", Profile: "work", Question: "what is pine-hollow gmv",
 		Embedding: staleVector(), Answer: "$2.4M", Created: "2026-01-01T00:00:00Z",
 	}); err != nil {
 		t.Fatalf("seed run cache: %v", err)
@@ -145,7 +145,7 @@ func TestReembedAllOverwritesEveryTable(t *testing.T) {
 	// Every seeded row's embedding actually changed from the stale marker.
 	checks := []struct{ table, idCol, id, embedCol string }{
 		{"lessons", "id", "lesson-1", "question_embedding"},
-		{"entities", "slug", "camp-butz", "summary_embedding"},
+		{"entities", "slug", "pine-hollow", "summary_embedding"},
 		{"memory_records", "id", "mem-1", "body_embedding"},
 		{"wiki_pages", "slug", "wiki-1", "embedding"},
 		{"jarvis_lessons", "id", "jl-1", "query_embedding"},

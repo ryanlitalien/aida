@@ -388,14 +388,14 @@ func TestSanitizeGHCommand(t *testing.T) {
 	}{
 		{
 			name:       "pr list strips trailing --owner VALUE",
-			in:         "pr list --repo butterstack/butter_stack --state open --owner ryanlitalien",
-			want:       "pr list --repo butterstack/butter_stack --state open",
+			in:         "pr list --repo acmewidgets/acme_widgets --state open --owner ryanlitalien",
+			want:       "pr list --repo acmewidgets/acme_widgets --state open",
 			wantChange: true,
 		},
 		{
 			name:       "pr list strips multiple --owner occurrences",
-			in:         "pr list --repo butterstack/butter_stack --state open --owner ryanlitalien --owner ryanlitalien-apps",
-			want:       "pr list --repo butterstack/butter_stack --state open",
+			in:         "pr list --repo acmewidgets/acme_widgets --state open --owner ryanlitalien --owner ryanlitalien-apps",
+			want:       "pr list --repo acmewidgets/acme_widgets --state open",
 			wantChange: true,
 		},
 		{
@@ -418,8 +418,8 @@ func TestSanitizeGHCommand(t *testing.T) {
 		},
 		{
 			name:       "search issues --owner is LEGITIMATE, untouched",
-			in:         "search issues --owner butterstack --state open",
-			want:       "search issues --owner butterstack --state open",
+			in:         "search issues --owner acmewidgets --state open",
+			want:       "search issues --owner acmewidgets --state open",
 			wantChange: false,
 		},
 		{

@@ -114,13 +114,13 @@ func TestExtractPRURL(t *testing.T) {
 		},
 		{
 			name: "bare url",
-			text: "https://github.com/ButterStack/butter_stack/pull/1617",
-			want: "https://github.com/ButterStack/butter_stack/pull/1617",
+			text: "https://github.com/AcmeWidgets/acme_widgets/pull/1617",
+			want: "https://github.com/AcmeWidgets/acme_widgets/pull/1617",
 		},
 		{
 			name: "url embedded in a report",
-			text: "Tracer bullet done.\n\nPR: https://github.com/ButterStack/butter_stack/pull/1617\n\nTests green.",
-			want: "https://github.com/ButterStack/butter_stack/pull/1617",
+			text: "Tracer bullet done.\n\nPR: https://github.com/AcmeWidgets/acme_widgets/pull/1617\n\nTests green.",
+			want: "https://github.com/AcmeWidgets/acme_widgets/pull/1617",
 		},
 		{
 			name: "url in parentheses -- trailing paren is not part of the path",
@@ -217,7 +217,7 @@ func TestExtractPRRef(t *testing.T) {
 		},
 		{
 			name:   "full url present but no issue-style ref",
-			text:   "https://github.com/ButterStack/butter_stack/pull/1617",
+			text:   "https://github.com/AcmeWidgets/acme_widgets/pull/1617",
 			wantOK: false,
 		},
 	}

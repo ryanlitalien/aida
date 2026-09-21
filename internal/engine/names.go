@@ -72,7 +72,7 @@ var genericNameTokens = map[string]bool{
 	"src":   true,
 }
 
-// compactToken strips hyphens so "butter-stack" and "butterstack"
+// compactToken strips hyphens so "acme-widgets" and "acmewidgets"
 // compare equal. Used as a fallback when the hyphenated comparison
 // fails - handles the common case where users omit separators.
 func compactToken(s string) string {

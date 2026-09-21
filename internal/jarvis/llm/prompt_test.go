@@ -29,14 +29,14 @@ func TestSystemPromptComposition(t *testing.T) {
 		t.Errorf("date block missing or malformed: %q", bare)
 	}
 
-	full := systemPrompt("", "", "User context:\n- Name: Ryan\n- Background: works at butterstack",
+	full := systemPrompt("", "", "User context:\n- Name: Ryan\n- Background: works at Acme Widgets",
 		"Boston", "Known machines:\n- build-box: runs background agents", "## Past feedback\n- use Fahrenheit")
-	for _, want := range []string{"works at butterstack", "home location is: Boston", "Known machines", "build-box", "Today is Thursday", "use Fahrenheit"} {
+	for _, want := range []string{"works at Acme Widgets", "home location is: Boston", "Known machines", "build-box", "Today is Thursday", "use Fahrenheit"} {
 		if !strings.Contains(full, want) {
 			t.Errorf("prompt missing %q", want)
 		}
 	}
-	soulAt := strings.Index(full, "works at butterstack")
+	soulAt := strings.Index(full, "works at Acme Widgets")
 	homeAt := strings.Index(full, "home location is: Boston")
 	hostsAt := strings.Index(full, "Known machines")
 	dateAt := strings.Index(full, "Today is")

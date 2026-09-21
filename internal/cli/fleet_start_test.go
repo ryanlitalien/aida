@@ -21,7 +21,7 @@ func TestValidateFleetStartOpts_RejectsBeforeAnySideEffect(t *testing.T) {
 			Task: "print hello and exit",
 			Host: "minty",
 			User: "ryan",
-			Cwd:  "/home/ryan/dev/butter_stack",
+			Cwd:  "/home/ryan/dev/acme_widgets",
 		}
 	}
 
@@ -59,7 +59,7 @@ func TestValidateFleetStartOpts_RejectsBeforeAnySideEffect(t *testing.T) {
 		},
 		{
 			name:    "relative cwd",
-			mutate:  func(o *fleetStartOpts) { o.Cwd = "dev/butter_stack" },
+			mutate:  func(o *fleetStartOpts) { o.Cwd = "dev/acme_widgets" },
 			wantErr: "--cwd must be an absolute path",
 		},
 		{
@@ -126,7 +126,7 @@ func TestBuildFleetWatchCmd(t *testing.T) {
 		Name:  "scarlett-978",
 		Host:  "minty",
 		User:  "ryan",
-		Repo:  "ButterStack/butter_stack",
+		Repo:  "AcmeWidgets/acme_widgets",
 		Model: "claude-opus-4-6",
 	}
 	cmd := buildFleetWatchCmd("/usr/local/bin/aida", o, "20260902-abc")
@@ -138,7 +138,7 @@ func TestBuildFleetWatchCmd(t *testing.T) {
 		"--host", "minty",
 		"--user", "ryan",
 		"--run-id", "20260902-abc",
-		"--repo", "ButterStack/butter_stack",
+		"--repo", "AcmeWidgets/acme_widgets",
 		"--model", "claude-opus-4-6",
 	}
 	if len(cmd.Args) != len(want) {

@@ -157,7 +157,7 @@ func TestSplitNameTokens(t *testing.T) {
 		{"GeminiWatermarkTool", []string{"gemini", "watermark", "tool"}},
 		{"late-cli", nil}, // "late" is 4 chars, kept; "cli" is 3, dropped
 		{"thrive", []string{"thrive"}},
-		{"butter-stack", []string{"butter", "stack"}},
+		{"acme-widgets", []string{"acme", "widgets"}},
 		{"3d-viewer", []string{"viewer"}},
 		{"", nil},
 		{"agent37-skills-collection-main", []string{"agent37", "skills", "collection", "main"}},

@@ -268,7 +268,7 @@ func runSessionQuery(
 
 		// Enrich the raw query with session context so sub-agents
 		// (claude-project) can resolve follow-up references like
-		// "is that merged?" → "is ButterStack issue #486 merged?"
+		// "is that merged?" → "is Acme Widgets issue #486 merged?"
 		last := state.History[len(state.History)-1]
 		intent.RawQuery = question + "\n\nContext from prior conversation:\n" +
 			fmt.Sprintf("Prior question: %s\nPrior answer: %s",

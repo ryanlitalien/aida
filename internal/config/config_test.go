@@ -91,7 +91,7 @@ func TestSourcesRoundTrip(t *testing.T) {
 			Path:         "~/dev/sqlite-data",
 			Type:         "data-source",
 			Context:      "CLAUDE.md",
-			Description:  "butterstack sqlite export",
+			Description:  "acme-widgets sqlite export",
 			Capabilities: []string{"sql-query", "partner-lookup"},
 			Entities:     []string{"thrive", "viewer-core"},
 			Exec: map[string]string{

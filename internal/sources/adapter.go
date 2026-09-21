@@ -92,7 +92,7 @@ func GetAdapterForSource(name string, src config.Source) Adapter {
 	// 3. "docs" with a local path but no exec → either grep the path (when
 	// search.mode == "grep" is set, opting into full-path search) or read
 	// only the context file (the legacy DocsAdapter behavior). The grep
-	// path is for partner repos like camp-butz, first-chair, thrive that ship
+	// path is for partner repos like pine-hollow, first-chair, thrive that ship
 	// a CLAUDE.md + docs/ + gdrive/ tree the synthesizer needs to search.
 	// The legacy path is for narrative-knowledge sources (architecture,
 	// aida, claude, ollama) whose CLAUDE.md is read whole.
@@ -288,7 +288,7 @@ func pickIDColumnFromMaps(keys []string, rows []map[string]interface{}) string {
 //
 // Resolution order:
 //  1. GitHub PR/issue shape: nested "repository" object + top-level "number"
-//     → "{repo}-{number}" (e.g. "butter-stack-3476"). Same shape with an
+//     → "{repo}-{number}" (e.g. "acme-widgets-3476"). Same shape with an
 //     "owner/name" variant covers `gh search` output.
 //  2. Well-known scalar id fields in priority order: id, ID, Id, number,
 //     name, Name, title, Title, url, URL.
@@ -319,7 +319,7 @@ func jsonRowID(row map[string]interface{}, fallbackCol string, index int) string
 }
 
 // extractRepoName pulls a repository name out of common GitHub API shapes.
-// `gh pr list --json repository` returns {"name": "butter_stack"};
+// `gh pr list --json repository` returns {"name": "acme_widgets"};
 // `gh search prs --json repository` returns {"nameWithOwner": "org/repo"};
 // `gh api` returns {"full_name": "org/repo"}. Also accepts a bare string.
 func extractRepoName(v interface{}) string {

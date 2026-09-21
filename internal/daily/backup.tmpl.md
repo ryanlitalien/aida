@@ -44,7 +44,7 @@ BACKUP SUMMARY
 
 BACKUP SUMMARY
 - 3 meetings backed up (2026-04-28 → 2026-04-29):
-  - 2026-04-28 [butterstack <> first-chair] Weekly Tech Call
+  - 2026-04-28 [acme-widgets <> first-chair] Weekly Tech Call
   - 2026-04-28 Ryan / Luke 1:1
   - 2026-04-29 Foo Sync
 - Skipped (empty): none

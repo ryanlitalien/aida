@@ -56,7 +56,7 @@ var meetilyMechanicalTagExact = map[string]bool{
 // isMechanicalTaskTag reports whether tag is bookkeeping noise that should
 // never appear in the classifier's tag vocabulary, as opposed to a real
 // project/topic tag (project:<slug>, or a plain topical tag like
-// "butterstack" or "hoa").
+// "acme-widgets" or "hoa").
 func isMechanicalTaskTag(tag string) bool {
 	lower := strings.ToLower(strings.TrimSpace(tag))
 	if lower == "" {

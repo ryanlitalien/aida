@@ -132,7 +132,7 @@ func TestBuildAutoSolveQuestion_TitleFallbackWithContext(t *testing.T) {
 // (TestRunDirSinkCompleteAndOutput asserts no ANSI bytes in output.md).
 
 func TestSlugifyForPlan_StripsPathUnsafeChars(t *testing.T) {
-	// Regression: live butterstack v2 ingest produced "15 tasks
+	// Regression: live acme-widgets v2 ingest produced "15 tasks
 	// created, 14 plans created" because the title "Review and
 	// update rake file/demo control tool" included a `/` that
 	// normalizeName didn't strip - WriteExecPlan tried to create
@@ -309,13 +309,13 @@ func TestAppendDestinationInstructions_GitHubPR(t *testing.T) {
 		"20260511-abcdef",
 		&jobs.Destination{
 			Type: jobs.DestinationTypeGitHubPR,
-			Repo: "ryanlitalien/butter_stack",
+			Repo: "ryanlitalien/acme_widgets",
 		},
 	)
 	if !strings.Contains(q, "DESTINATION: github-pr") {
 		t.Errorf("missing destination header:\n%s", q)
 	}
-	if !strings.Contains(q, "ryanlitalien/butter_stack") {
+	if !strings.Contains(q, "ryanlitalien/acme_widgets") {
 		t.Errorf("repo not in prompt")
 	}
 	if !strings.Contains(q, "Title:") {

@@ -12,7 +12,7 @@ import (
 // named, now renders as its own "- key: value" line).
 func TestQueryConstructUserPromptFlatKeyList(t *testing.T) {
 	resolved := map[string]string{
-		"entity_name":      "camp-butz",
+		"entity_name":      "pine-hollow",
 		"resource_id":      "HBRPOIG8F1CBFNO6",
 		"resource_id_ca":   "MECOSFOGYR3XKXWN",
 		"resource_id_test": "B9M80O2RAK1VRJNV",
@@ -20,12 +20,12 @@ func TestQueryConstructUserPromptFlatKeyList(t *testing.T) {
 	}
 	prompt := QueryConstructUserPrompt(
 		"sqlite", "ctx", "sqlite3 -q {query}",
-		"latest camp-butz booking and amount transacted",
+		"latest pine-hollow booking and amount transacted",
 		resolved, "", "", "",
 	)
 
 	for _, want := range []string{
-		"entity_name: camp-butz",
+		"entity_name: pine-hollow",
 		"resource_id: HBRPOIG8F1CBFNO6",
 		"resource_id_ca: MECOSFOGYR3XKXWN",
 		"resource_id_test: B9M80O2RAK1VRJNV",

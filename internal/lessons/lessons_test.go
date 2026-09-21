@@ -77,7 +77,7 @@ func TestFindSimilarRanksByOverlap(t *testing.T) {
 	}
 	mustAppend("how much did I spend last month", "finances")
 	mustAppend("what's the latest workout I did", "workouts")
-	mustAppend("what was the last commit Kevin did", "git-dev")
+	mustAppend("what was the last commit Ralph did", "git-dev")
 	mustAppend("when did I work out yesterday", "workouts")
 
 	got, err := FindSimilar("how much did I spend last week on groceries", 3)
