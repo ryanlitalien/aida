@@ -9,21 +9,29 @@ import (
 
 	"github.com/ryanlitalien/aida/internal/brain"
 	"github.com/ryanlitalien/aida/internal/jobs"
+	"github.com/ryanlitalien/aida/internal/worktree"
 )
 
-// openTaskPR pushes the task's worktree branch to origin and opens a PR against
-// base (default "main"), requesting review from reviewer when non-empty. It is
-// the autonomous-loop's "tag me for review" step - and the loop NEVER merges:
-// the PR sits awaiting the human. Returns the PR URL.
+// openTaskPR pushes the task's worktree branch to remote (the one the base
+// branch tracks, resolved once per run by loopOpts.resolveBase) and opens a PR
+// against base (default "main"), requesting review from reviewer when
+// non-empty. It is the autonomous-loop's "tag me for review" step - and the
+// loop NEVER merges: the PR sits awaiting the human. Returns the PR URL.
 //
 // gh is invoked with cmd.Dir set to the worktree (gh has no global -C), and all
 // args are passed as discrete argv elements (no shell), so the title/body can't
 // shell-inject.
-func openTaskPR(workDir, branch string, task *brain.TaskRecord, reviewer, base string) (string, error) {
+func openTaskPR(workDir, branch string, task *brain.TaskRecord, reviewer, base, remote string) (string, error) {
 	if branch == "" {
 		return "", fmt.Errorf("openTaskPR: empty branch (--pr requires --worktree)")
 	}
-	if out, err := exec.Command("git", "-C", workDir, "push", "-u", "origin", branch).CombinedOutput(); err != nil {
+	if remote == "" {
+		return "", fmt.Errorf("openTaskPR: base branch %q tracks no remote, nothing to push to", orDefault(base, "main"))
+	}
+	if err := reviewMirrorRefusal(workDir, remote); err != nil {
+		return "", err
+	}
+	if out, err := exec.Command("git", "-C", workDir, "push", "-u", remote, branch).CombinedOutput(); err != nil {
 		return "", fmt.Errorf("git push %s: %w (%s)", branch, err, strings.TrimSpace(string(out)))
 	}
 	if base == "" {
@@ -47,6 +55,44 @@ func openTaskPR(workDir, branch string, task *brain.TaskRecord, reviewer, base s
 	return extractPRURL(s), nil
 }
 
+// reviewMirrorRefusal fails fast when pushing to remote would bypass a
+// review-mirror flow: remote is a public GitHub repo, and the repo also has
+// some other remote that is not on GitHub (a Forgejo or self-hosted mirror
+// where PRs are reviewed before anything reaches the public repo). Pushing an
+// autonomous branch straight to the public repo in that setup is exactly the
+// wrong move, and opening the PR on the mirror instead is a separate feature,
+// so --pr is refused outright rather than half-working. Returns nil for the
+// ordinary case (every remote on GitHub, or the resolved remote off GitHub).
+func reviewMirrorRefusal(workDir, remote string) error {
+	resolvedURL := worktree.RemoteURL(workDir, remote)
+	if !isGitHubURL(resolvedURL) {
+		return nil
+	}
+	for _, name := range worktree.Remotes(workDir) {
+		if name == remote {
+			continue
+		}
+		url := worktree.RemoteURL(workDir, name)
+		if url == "" || isGitHubURL(url) {
+			continue
+		}
+		return fmt.Errorf("--pr is not supported in this repo yet: it uses a review-mirror flow "+
+			"(base branch tracks the public GitHub remote %q at %s, but remote %q at %s is a non-GitHub mirror where PRs are reviewed first). "+
+			"Pushing the branch straight to %q would skip that review. Run the loop without --pr (for example --commit), "+
+			"or push the auto/ branch to %q and open the review PR there by hand",
+			remote, resolvedURL, name, url, remote, name)
+	}
+	return nil
+}
+
+// isGitHubURL reports whether a git remote URL points at github.com, in any
+// of the ssh (git@github.com:o/r.git, ssh://git@github.com/o/r), https, or
+// scp-with-alias forms git accepts.
+func isGitHubURL(url string) bool {
+	u := strings.ToLower(strings.TrimSpace(url))
+	return strings.Contains(u, "github.com:") || strings.Contains(u, "github.com/")
+}
+
 // extractPRURL pulls the PR URL line out of `gh pr create` output.
 func extractPRURL(s string) string {
 	for _, ln := range strings.Split(s, "\n") {
@@ -57,13 +103,15 @@ func extractPRURL(s string) string {
 	return s
 }
 
-// worktreeDiff returns `git diff <base>` for the worktree, capped so a huge
-// change doesn't blow the reviewer prompt budget.
-func worktreeDiff(workDir, base string) string {
-	if base == "" {
-		base = "origin/main"
+// worktreeDiff returns `git diff <baseRef>` for the worktree, capped so a huge
+// change doesn't blow the reviewer prompt budget. baseRef is the resolved
+// remote-tracking ref (e.g. public/main); an empty baseRef falls back to
+// whatever main tracks in workDir's repo.
+func worktreeDiff(workDir, baseRef string) string {
+	if baseRef == "" {
+		_, baseRef = worktree.ResolveUpstream(workDir, "main")
 	}
-	out, _ := exec.Command("git", "-C", workDir, "diff", base).CombinedOutput()
+	out, _ := exec.Command("git", "-C", workDir, "diff", baseRef).CombinedOutput()
 	d := strings.TrimSpace(string(out))
 	const max = 14000
 	if len(d) > max {
@@ -95,7 +143,7 @@ func (o loopOpts) runReviewPanel(ctx context.Context, store *jobs.Store, aidaBin
 	if n <= 0 {
 		return true
 	}
-	diff := worktreeDiff(workDir, "origin/"+orDefault(o.base, "main"))
+	diff := worktreeDiff(workDir, o.baseRef)
 	if diff == "" {
 		fmt.Println("  review panel: empty diff - nothing to review, approving")
 		return true

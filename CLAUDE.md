@@ -68,7 +68,7 @@ Flags: `--http` forces HTTP mode; `--no-listen` disables the mic; `--no-jarvis` 
 |---|---|---|
 | `--loop` | (n/a) | enable the dispatcher; off by default |
 | `--loop-tag` (repeatable) | `--tag` | only loop over tasks carrying ALL of these tags |
-| `--loop-worktree` | `--worktree` | isolate each looped task in its own git worktree off `origin/main` |
+| `--loop-worktree` | `--worktree` | isolate each looped task in its own git worktree off the base branch's upstream (whatever remote `main` tracks, e.g. `public/main`) |
 | `--loop-pr` | `--pr` | open a PR per passing looped task instead of completing it directly (implies `--loop-worktree`) |
 | `--loop-reviewer` | `--reviewer` | GitHub handle to request review from on looped PRs |
 | `--loop-check` (repeatable) | `--check` | quality-gate command run after each looped attempt; must exit 0 |
@@ -261,7 +261,7 @@ A Ralph-style autonomous driver: a deterministic outer loop that repeatedly spaw
 | `--check "<cmd>"` (repeatable) | (none) | quality gate run after each attempt; must exit 0 (e.g. `"make test"`). No gate = pass with warning |
 | `--max-fix-iterations N` | 3 | max fix attempts per task before parking it on hold |
 | `--commit` | false | commit the working tree after a passing iteration (mutually exclusive with `--pr`) |
-| `--worktree` | false | run each task in an isolated git worktree branched off `origin/main` |
+| `--worktree` | false | run each task in an isolated git worktree branched off the base branch's upstream (see below) |
 | `--pr` | false | open a PR per passing task and tag a reviewer; implies `--worktree`; the loop never merges |
 | `--reviewer <handle>` | (none) | GitHub handle to request review from on the PR (`--pr`) |
 | `--base <branch>` | main | base branch for PRs (`--pr`) |
@@ -279,6 +279,8 @@ A Ralph-style autonomous driver: a deterministic outer loop that repeatedly spaw
 | `--dry-run` (global) | (none) | print the task(s) it would pick; no spawn, no mutation |
 
 `aida loop plan` flags: `--tag` (default `loop`), `--max-tasks N` (0 = no cap), `--dry-run`.
+
+The loop never names a remote. At the start of a `--worktree` / `--pr` run it asks git which remote the `--base` branch tracks (`worktree.ResolveUpstream`, reading `branch.<base>.remote` and `branch.<base>.merge`) and resolves that once into `loopOpts.baseRemote` / `loopOpts.baseRef` (e.g. `public` / `public/main`). Every worktree is cut from that ref (after a best-effort fetch of that remote), the review panel diffs against it, and `--pr` pushes to that remote, so the three cannot drift. A base branch with no upstream, or a repo with no remotes, falls back to `origin` / `origin/<base>`, which is exactly the old behavior for any single-remote project. This matters in this repo: `origin` is the Forgejo mirror carrying the unrelated pre-launch history, and `main` tracks `public` (GitHub). `--pr` is refused up front in a repo whose base branch tracks a public GitHub remote while a non-GitHub mirror remote also exists (this repo's review-on-the-forge-first flow), since pushing straight to GitHub would skip that review and opening the PR on the mirror is not built yet; use `--commit` or push the `auto/` branch to the mirror by hand.
 
 Typical use, drive the whole thing from a goal:
 ```bash

@@ -6,6 +6,13 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.11.0
+
+- The autonomous loop no longer hardcodes `origin` as the remote a project lives on. At the start of a `--worktree` / `--pr` run it now asks git which remote the `--base` branch tracks (`worktree.ResolveUpstream`, reading `branch.<base>.remote` and `branch.<base>.merge`) and resolves that once into the loop options, so worktree creation (`internal/cli/loop.go`), the `--pr` push (`internal/cli/pr.go`), and the review-panel diff all use the same remote and remote-tracking ref (e.g. `public` / `public/main`) and cannot drift. Previously `--base` never reached worktree creation at all (even `--base release` branched off `origin/main`), the PR push went to a literal `origin` and then `gh pr create` failed on a branch GitHub had never seen, and the review panel diffed against `origin/<base>` regardless of what the base branch tracks. A base branch with no upstream, or a repo with no remotes, falls back to `origin` / `origin/<base>`, so any single-remote project behaves exactly as before; a base tracking a local branch (`.` remote) cuts from that branch and refuses to push.
+- `worktree.Create` now pre-fetches whichever configured remote the base ref names (checked against `git remote`) rather than only when the ref starts with `origin/`, so a worktree cut off `public/main` or `upstream/release` starts from the fresh remote tip too. The fetch stays best-effort and an offline failure still falls back to the local ref.
+- `aida loop --pr` now fails fast, before any push, in a repo whose base branch tracks a public GitHub remote while some other remote is a non-GitHub mirror (a review-on-the-forge-first layout). The error names both remotes and their URLs and says `--pr` is not supported there yet; use `--commit` or push the `auto/` branch to the mirror by hand. Opening the PR on the mirror is a separate feature.
+- Running `aida loop --worktree` outside a git repository now fails the run up front instead of parking every task on hold one at a time.
+
 ## v1.10.0
 
 - Bumped `go.opentelemetry.io/otel/sdk` from 1.43.0 to 1.45.0, which carries `otel`, `otel/trace`, and `otel/metric` to 1.45.0 alongside it, plus the indirect `github.com/go-logr/logr` 1.4.4 and `golang.org/x/sys` 0.47.0 that those modules require. No API surface aida uses changed, and the full test suite passes unmodified.
