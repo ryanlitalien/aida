@@ -278,6 +278,22 @@ own. Full picture:
 [`docs/diagrams/three-repo-cut.md`](docs/diagrams/three-repo-cut.md),
 [`docs/diagrams/ecosystem-map.md`](docs/diagrams/ecosystem-map.md).
 
+## The shape around it
+
+aida is the public core. Everything specific to you lives in repos you own and never publish. The example names below are the author's; yours would differ, and that is the point.
+
+| Yours | Example repo | What it holds | Why it stays private | How aida reaches it |
+|---|---|---|---|---|
+| config | `aida-config` | sources, routes, roster, library | it names your machines, your data, your tools | `~/.aida/`, a git repo you create |
+| memory | `aida-brain` | lessons, tasks, entities, knowledge | it is everything you have ever told it | `~/.aida/brain/`, auto-committed |
+| knowledge | `aida-wiki` | a corpus you want it to answer from | yours by definition | `aida wiki index` |
+| fleet | `aida-agents` | long-running agents on your own boxes | it names hosts and holds credentials | `aida --agent --run-dir`, the jobs queue |
+| clients | `aida-android` | a phone, a car, a watch | your daemon's address is in it | the L.M.D. protocol over HTTP |
+
+None of these are required. aida runs standalone, and `aida init` creates the first two for you.
+
+The rule the split enforces: the public core knows nothing about you. Swap the private half and the same binary serves someone else entirely.
+
 ## Commands
 
 ```bash

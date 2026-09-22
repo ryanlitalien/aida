@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.12.0
+
+- README gained a "The shape around it" section: a table naming the five kinds of private repo that sit around the public core (config, memory, knowledge, fleet, clients), what each holds, why each stays private, and which aida surface reaches it. The point is the separation rather than the author's particular repos, so a reader can see how to keep their own machines, data and credentials out of anything they publish while still running the same binary.
+
 ## v1.11.0
 
 - The autonomous loop no longer hardcodes `origin` as the remote a project lives on. At the start of a `--worktree` / `--pr` run it now asks git which remote the `--base` branch tracks (`worktree.ResolveUpstream`, reading `branch.<base>.remote` and `branch.<base>.merge`) and resolves that once into the loop options, so worktree creation (`internal/cli/loop.go`), the `--pr` push (`internal/cli/pr.go`), and the review-panel diff all use the same remote and remote-tracking ref (e.g. `public` / `public/main`) and cannot drift. Previously `--base` never reached worktree creation at all (even `--base release` branched off `origin/main`), the PR push went to a literal `origin` and then `gh pr create` failed on a branch GitHub had never seen, and the review panel diffed against `origin/<base>` regardless of what the base branch tracks. A base branch with no upstream, or a repo with no remotes, falls back to `origin` / `origin/<base>`, so any single-remote project behaves exactly as before; a base tracking a local branch (`.` remote) cuts from that branch and refuses to push.
