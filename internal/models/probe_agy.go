@@ -304,10 +304,7 @@ func probeAgyQuota(ctx context.Context, p Provider) Usage {
 	}
 	u.Bars = bars
 
-	known := map[string]bool{}
-	for _, m := range p.Models {
-		known[strings.ToLower(m.ID)] = true
-	}
+	known := p.KnownModelIDs()
 	if modelsRes, merr := execx.Run(ctx, "agy", []string{"models"}, execx.RunOpts{Timeout: agyModelsTimeout}); merr == nil && !modelsRes.TimedOut {
 		if unlisted := agyModelsUnlisted(string(modelsRes.Stdout), known); unlisted != "" {
 			detail["unlisted_models"] = unlisted

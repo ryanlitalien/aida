@@ -1,0 +1,63 @@
+# Example AI model + plan roster. Copy to ~/.aida/models.yaml and edit.
+#
+# "Which models can I use, on which plan, and what nickname means what."
+# Rendered by `aida models` (CLI), GET /api/models, and the Models panel on
+# /dashboard. Live usage numbers are NOT stored here -- aida probes each
+# provider's local state at request time (see `probe:` below). See
+# CLAUDE.md's "Models panel + `aida models`" section for the full design.
+#
+# nickname rule: anything you say in a session ("fable", "sol", "flash")
+# should resolve here first. If it does not, add it.
+
+updated: 2026-09-01
+
+guidance:
+  - "Example standing rule: prefer the workhorse tier for routine coding subagents, save the frontier tier for design/judgement calls."
+
+providers:
+  - name: anthropic
+    label: Anthropic / Claude
+    plan: Claude Max
+    account: you@example.com
+    probe: claude-oauth
+    limits:
+      - 5-hour session window (all models)
+      - 7-day window (all models)
+    models:
+      - id: claude-example-frontier-1
+        nicknames: [frontier, judge]
+        tier: frontier
+        note: judgement, design, audits.
+      - id: claude-example-workhorse-1
+        nicknames: [workhorse]
+        tier: workhorse
+        note: default for coding subagents.
+    # Superseded versions still count as "known" for the unlisted-model
+    # diff (a local tool cache may still list an old id), but they never
+    # resolve by nickname and never appear in `aida models` output or the
+    # dashboard. Drop an id here the day a newer one on the same line
+    # ships, instead of deleting it outright, so the diff stays quiet.
+    retired:
+      - claude-example-workhorse-0
+
+  - name: openai
+    label: OpenAI / ChatGPT + Codex
+    plan: ChatGPT Plus
+    account: you@example.com
+    probe: codex-sessions
+    models:
+      - id: gpt-example-6
+        nicknames: [gpt6]
+        tier: workhorse
+    retired:
+      - gpt-example-5
+
+  - name: voyage
+    label: Voyage (embeddings)
+    plan: pay-as-you-go
+    probe: none
+    models:
+      - id: voyage-example-4-lite
+        nicknames: [voyage]
+    retired:
+      - voyage-example-3-lite
