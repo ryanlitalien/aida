@@ -248,6 +248,25 @@ func TestAgyModelsUnlisted_FlagsARealNewModel(t *testing.T) {
 	}
 }
 
+func TestAgyModelsUnlisted_RetiredIDCountsAsKnown(t *testing.T) {
+	// gemini-3.6-flash and gemini-3.7-flash were dropped from the active
+	// google roster (2026-09-24, superseded by gemini-3.8-flash) but a
+	// still-warm agy models cache may keep listing them for a while;
+	// retired ids must count as known so that doesn't flag as unlisted.
+	p := Provider{
+		Name:    "google",
+		Models:  []Model{{ID: "gemini-3.8-flash"}},
+		Retired: []string{"gemini-3.6-flash", "gemini-3.7-flash"},
+	}
+	text := "gemini-3.8-flash-high\tGemini 3.8 Flash (High)\n" +
+		"gemini-3.7-flash-medium\tGemini 3.7 Flash (Medium)\n" +
+		"gemini-3.6-flash-low\tGemini 3.6 Flash (Low)\n"
+	got := agyModelsUnlisted(text, p.KnownModelIDs())
+	if got != "" {
+		t.Errorf("agyModelsUnlisted = %q, want empty (retired ids count as known, incl. effort-suffix stripping)", got)
+	}
+}
+
 func TestAgyModelsUnlisted_Empty(t *testing.T) {
 	if got := agyModelsUnlisted("", agyRosterKnownIDs()); got != "" {
 		t.Errorf("agyModelsUnlisted(\"\", ...) = %q, want empty", got)

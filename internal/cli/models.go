@@ -216,6 +216,12 @@ func printModelsText(resp modelsAPIResponse, loc *time.Location) {
 				fmt.Printf("  reset credits: %d free full resets available\n", rc)
 			}
 		}
+		if uc, ok := p.Usage.Detail["usage_credits"]; ok && uc != "" {
+			fmt.Printf("  %s\n", uc)
+		}
+		if bd, ok := p.Usage.Detail["seven_day_breakdown"]; ok && bd != "" {
+			fmt.Printf("  %s\n", bd)
+		}
 		// A Warn line (last-good fallback, see internal/models/probe_cache.go)
 		// replaces the Err line entirely -- Err is always cleared whenever
 		// Warn is set, so this is never both.

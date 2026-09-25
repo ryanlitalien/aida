@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ryanlitalien/aida/internal/execx"
@@ -104,6 +107,16 @@ func probeClaudeOAuth(ctx context.Context, p Provider) Usage {
 		return u
 	}
 	u.Bars = bars
+
+	if line := claudeUsageCreditsLine(resp.ExtraUsage, resp.Spend); line != "" {
+		detail["usage_credits"] = line
+	}
+	if line := claudeSevenDayBreakdownLine(resp.SevenDayBreakdown); line != "" {
+		detail["seven_day_breakdown"] = line
+	}
+	if len(detail) > 0 {
+		u.Detail = detail
+	}
 	return u
 }
 
@@ -228,9 +241,177 @@ type claudeUsageWindow struct {
 }
 
 type claudeUsageResponse struct {
-	Limits   []claudeUsageLimit `json:"limits"`
-	FiveHour *claudeUsageWindow `json:"five_hour"`
-	SevenDay *claudeUsageWindow `json:"seven_day"`
+	Limits            []claudeUsageLimit       `json:"limits"`
+	FiveHour          *claudeUsageWindow       `json:"five_hour"`
+	SevenDay          *claudeUsageWindow       `json:"seven_day"`
+	ExtraUsage        *claudeExtraUsage        `json:"extra_usage"`
+	Spend             *claudeSpend             `json:"spend"`
+	SevenDayBreakdown *claudeSevenDayBreakdown `json:"seven_day_breakdown"`
+}
+
+// claudeExtraUsage is the oauth/usage payload's "extra_usage" object --
+// Anthropic's purchasable usage credits, which cover spend past the
+// plan's included rate-limit windows. There is no free reset (unlike
+// Codex's reset_credits); this is a spend account, on or off by choice,
+// with an optional monthly cap. Every numeric field is a pointer because
+// the API sends null for most of them whenever credits aren't enabled.
+type claudeExtraUsage struct {
+	IsEnabled          bool     `json:"is_enabled"`
+	MonthlyLimit       *int64   `json:"monthly_limit"`
+	UsedCredits        *int64   `json:"used_credits"`
+	Utilization        *float64 `json:"utilization"`
+	Currency           *string  `json:"currency"`
+	DecimalPlaces      *int     `json:"decimal_places"`
+	DisabledReason     *string  `json:"disabled_reason"`
+	UserDisabled       bool     `json:"user_disabled"`
+	SpendLimitReached  bool     `json:"spend_limit_reached"`
+	CreditsEverEnabled bool     `json:"credits_ever_enabled"`
+	// Daily/Weekly shape is undocumented and unused by this probe today;
+	// kept as raw JSON so an unexpected shape (object, array, or null)
+	// never breaks unmarshaling.
+	Daily  json.RawMessage `json:"daily"`
+	Weekly json.RawMessage `json:"weekly"`
+}
+
+// claudeMoneyAmount is the {amount_minor, currency, exponent} shape used
+// by every dollar figure in "spend" (used/limit/cap/balance).
+type claudeMoneyAmount struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+	Exponent    int    `json:"exponent"`
+}
+
+// claudeSpend is the oauth/usage payload's "spend" object -- the
+// account's overall dollar spend view (distinct from extra_usage, which
+// is specifically the purchasable-credits sub-account).
+type claudeSpend struct {
+	Used               *claudeMoneyAmount `json:"used"`
+	Limit              *claudeMoneyAmount `json:"limit"`
+	Percent            float64            `json:"percent"`
+	Severity           string             `json:"severity"`
+	Enabled            bool               `json:"enabled"`
+	DisabledReason     *string            `json:"disabled_reason"`
+	Cap                json.RawMessage    `json:"cap"`
+	Balance            *claudeMoneyAmount `json:"balance"`
+	AutoReload         json.RawMessage    `json:"auto_reload"`
+	Disclaimer         string             `json:"disclaimer"`
+	CanPurchaseCredits bool               `json:"can_purchase_credits"`
+	CanToggle          bool               `json:"can_toggle"`
+}
+
+// claudeBreakdownRow is one row of "seven_day_breakdown.rows" -- a named
+// surface (Claude Code, Chats, Cowork, Other) and its share of the
+// account's 7-day usage.
+type claudeBreakdownRow struct {
+	Key         string  `json:"key"`
+	DisplayName string  `json:"display_name"`
+	Percent     float64 `json:"percent"`
+}
+
+type claudeSevenDayBreakdown struct {
+	AsOf            string               `json:"as_of"`
+	WindowStartedAt string               `json:"window_started_at"`
+	Rows            []claudeBreakdownRow `json:"rows"`
+}
+
+// formatDecimalAmount renders an integer minor-unit value (amount_minor,
+// used_credits, monthly_limit, ...) at decimalPlaces (exponent or
+// decimal_places) precision, e.g. (1234, 2) -> "12.34". decimalPlaces <=
+// 0 renders the raw integer.
+func formatDecimalAmount(v int64, decimalPlaces int) string {
+	if decimalPlaces <= 0 {
+		return strconv.FormatInt(v, 10)
+	}
+	div := math.Pow(10, float64(decimalPlaces))
+	return strconv.FormatFloat(float64(v)/div, 'f', decimalPlaces, 64)
+}
+
+// formatMoney renders a claudeMoneyAmount, or "" when nil.
+func formatMoney(a *claudeMoneyAmount) string {
+	if a == nil {
+		return ""
+	}
+	return formatDecimalAmount(a.AmountMinor, a.Exponent)
+}
+
+// trimPercent formats a percent value with no trailing zeros ("100",
+// "12.5", "0") -- used for the 7-day breakdown row percentages, which the
+// payload already sends on a 0-100 scale.
+func trimPercent(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
+}
+
+// claudeUsageCreditsLine renders the Anthropic analogue of the Codex
+// probe's "reset credits" line for Detail["usage_credits"]. Unlike Codex,
+// there's no free reset here -- these are purchasable usage credits that
+// cover spend past the plan's included limits, on or off by choice, with
+// an optional monthly cap. Returns "" when extra is nil (payload omitted
+// the field entirely), which the caller treats as "nothing to show."
+func claudeUsageCreditsLine(extra *claudeExtraUsage, spend *claudeSpend) string {
+	if extra == nil {
+		return ""
+	}
+
+	var line string
+	switch {
+	case extra.IsEnabled:
+		decimals := 0
+		if extra.DecimalPlaces != nil {
+			decimals = *extra.DecimalPlaces
+		}
+		used := "0"
+		switch {
+		case extra.UsedCredits != nil:
+			used = formatDecimalAmount(*extra.UsedCredits, decimals)
+		case spend != nil && spend.Used != nil:
+			used = formatMoney(spend.Used)
+		}
+		if extra.MonthlyLimit != nil {
+			limit := formatDecimalAmount(*extra.MonthlyLimit, decimals)
+			line = fmt.Sprintf("usage credits: on, $%s of $%s this month", used, limit)
+			if extra.Utilization != nil {
+				line += fmt.Sprintf(" (%s%%)", trimPercent(*extra.Utilization))
+			}
+		} else {
+			line = fmt.Sprintf("usage credits: on, $%s used", used)
+		}
+	case extra.UserDisabled:
+		line = "usage credits: off by choice"
+		if spend != nil && spend.Balance != nil {
+			line += fmt.Sprintf(", balance $%s", formatMoney(spend.Balance))
+		}
+		if extra.SpendLimitReached {
+			line += ", spend limit reached"
+		}
+	default:
+		// Not enabled and never enabled (or an unrecognized combination
+		// of flags) -- report the plain "not enabled" state either way.
+		line = "usage credits: not enabled"
+	}
+
+	if spend != nil && spend.CanPurchaseCredits {
+		line += " (can buy)"
+	}
+	return line
+}
+
+// claudeSevenDayBreakdownLine renders Detail["seven_day_breakdown"] --
+// the per-surface share of the account's 7-day usage window (Claude
+// Code, Chats, Cowork, Other), in the payload's own row order. Returns
+// "" when b is nil or carries no rows.
+func claudeSevenDayBreakdownLine(b *claudeSevenDayBreakdown) string {
+	if b == nil || len(b.Rows) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(b.Rows))
+	for _, r := range b.Rows {
+		name := r.DisplayName
+		if name == "" {
+			name = r.Key
+		}
+		parts = append(parts, fmt.Sprintf("%s %s%%", name, trimPercent(r.Percent)))
+	}
+	return "7-day by surface: " + strings.Join(parts, ", ")
 }
 
 // fetchClaudeUsage is the one network call this prober makes, factored

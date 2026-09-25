@@ -60,6 +60,10 @@ providers:
     models:
       - id: claude-sonnet-5
         nicknames: [sonnet]
+    retired:
+      - claude-sonnet-4-6
+      - claude-opus-4-6
+      - claude-haiku-4-5
 `
 
 func loadTestRoster(t *testing.T) *Roster {
@@ -104,6 +108,53 @@ func TestLoad(t *testing.T) {
 	}
 	if litellm.LiteLLM.SSHHost != "minty" {
 		t.Errorf("litellm SSHHost = %q, want minty", litellm.LiteLLM.SSHHost)
+	}
+}
+
+func TestLoad_RetiredModels(t *testing.T) {
+	r := loadTestRoster(t)
+	var litellm *Provider
+	for i := range r.Providers {
+		if r.Providers[i].Name == "litellm" {
+			litellm = &r.Providers[i]
+		}
+	}
+	if litellm == nil {
+		t.Fatal("litellm provider not found")
+	}
+	wantRetired := []string{"claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5"}
+	if len(litellm.Retired) != len(wantRetired) {
+		t.Fatalf("Retired = %v, want %v", litellm.Retired, wantRetired)
+	}
+	for i, id := range wantRetired {
+		if litellm.Retired[i] != id {
+			t.Errorf("Retired[%d] = %q, want %q", i, litellm.Retired[i], id)
+		}
+	}
+
+	// A retired id is known for the unlisted-model diff...
+	known := litellm.KnownModelIDs()
+	for _, id := range wantRetired {
+		if !known[id] {
+			t.Errorf("KnownModelIDs()[%q] = false, want true (retired ids count as known)", id)
+		}
+	}
+	if !known["claude-sonnet-5"] {
+		t.Error(`KnownModelIDs()["claude-sonnet-5"] = false, want true (active model)`)
+	}
+
+	// ...but never resolves by nickname or id, and never shows up in Models.
+	for _, id := range wantRetired {
+		if matches := r.Resolve(id); len(matches) != 0 {
+			t.Errorf("Resolve(%q) = %v, want no matches (retired model)", id, matches)
+		}
+	}
+	for _, m := range litellm.Models {
+		for _, id := range wantRetired {
+			if m.ID == id {
+				t.Errorf("Models contains retired id %q, want it absent", id)
+			}
+		}
 	}
 }
 

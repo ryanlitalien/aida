@@ -43,6 +43,17 @@ type Provider struct {
 	Limits []string `yaml:"limits,omitempty" json:"limits,omitempty"`
 	Notes  []string `yaml:"notes,omitempty" json:"notes,omitempty"`
 	Models []Model  `yaml:"models,omitempty" json:"models,omitempty"`
+	// Retired lists model ids this provider used to offer but Ryan has
+	// dropped from the active roster (a superseded version once a newer
+	// one on the same line ships, e.g. gpt-5.5 once gpt-6 exists).
+	// Retired ids still count as "known" for every unlisted-model diff a
+	// probe runs against a local tool cache (Codex's models_cache.json,
+	// agy's `agy models`, including -high/-medium/-low suffix stripping)
+	// -- so a tool that still lists an old id locally doesn't get flagged
+	// as unlisted every time -- but they are never resolved by nickname
+	// (Resolve only ever walks Models) and never appear in `aida models`,
+	// `aida models --json`, or the dashboard's Models panel.
+	Retired []string `yaml:"retired,omitempty" json:"-"`
 
 	// LiteLLM configures the litellm probe: where the proxy lives and how
 	// to get its master key. Nil for every other probe kind.
@@ -52,6 +63,25 @@ type Provider struct {
 	// (optionally read over ssh) instead of the local macOS keychain. Nil
 	// means "use this machine's keychain," the default and original path.
 	ClaudeConfig *ClaudeConfig `yaml:"claude,omitempty" json:"claude,omitempty"`
+}
+
+// KnownModelIDs returns the lowercased set of every model id this
+// provider recognizes for the purpose of an "unlisted locally, not in
+// roster" diff: both its active Models and its Retired ids. Retired ids
+// are included so a superseded version a local tool cache still lists
+// (Codex's models_cache.json, `agy models`) doesn't get flagged as
+// unlisted just because Ryan dropped it from the active roster -- but
+// they are deliberately absent from every other view (Resolve, `aida
+// models`, JSON output, the dashboard), which all read Models directly.
+func (p Provider) KnownModelIDs() map[string]bool {
+	known := make(map[string]bool, len(p.Models)+len(p.Retired))
+	for _, m := range p.Models {
+		known[strings.ToLower(m.ID)] = true
+	}
+	for _, id := range p.Retired {
+		known[strings.ToLower(id)] = true
+	}
+	return known
 }
 
 // Model is one model available on a Provider.

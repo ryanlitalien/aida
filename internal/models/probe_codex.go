@@ -74,10 +74,7 @@ func probeCodexSessions(ctx context.Context, p Provider) Usage {
 	if v := readCodexVersion(ctx); v != "" {
 		detail["codex_version"] = v
 	}
-	known := map[string]bool{}
-	for _, m := range p.Models {
-		known[strings.ToLower(m.ID)] = true
-	}
+	known := p.KnownModelIDs()
 	if unlisted := unlistedCodexModels(filepath.Join(codexDir, "models_cache.json"), known); unlisted != "" {
 		detail["unlisted_models"] = unlisted
 	}

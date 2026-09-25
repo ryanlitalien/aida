@@ -224,6 +224,31 @@ func TestUnlistedCodexModels(t *testing.T) {
 	}
 }
 
+func TestUnlistedCodexModels_RetiredIDCountsAsKnown(t *testing.T) {
+	cache := codexModelsCache{Models: []struct {
+		Slug        string `json:"slug"`
+		DisplayName string `json:"display_name"`
+	}{
+		{Slug: "gpt-6-astra", DisplayName: "Astra"},
+		{Slug: "gpt-5.6-sol", DisplayName: "Sol (superseded)"},
+	}}
+	data, _ := json.Marshal(cache)
+	path := filepath.Join(t.TempDir(), "models_cache.json")
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatalf("write models_cache.json: %v", err)
+	}
+
+	p := Provider{
+		Name:    "openai",
+		Models:  []Model{{ID: "gpt-6-astra"}},
+		Retired: []string{"gpt-5.6-sol"},
+	}
+	got := unlistedCodexModels(path, p.KnownModelIDs())
+	if got != "" {
+		t.Errorf("unlistedCodexModels = %q, want empty (retired id should count as known)", got)
+	}
+}
+
 func TestFindKeyAnyDepth(t *testing.T) {
 	var v any
 	if err := json.Unmarshal([]byte(`{"a":{"b":[{"c":1},{"target":"found"}]}}`), &v); err != nil {

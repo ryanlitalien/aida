@@ -162,6 +162,148 @@ func TestReadClaudeCredentialsFromFile_Missing(t *testing.T) {
 	}
 }
 
+func TestClaudeUsageCreditsLine_Enabled(t *testing.T) {
+	limit := int64(10000)
+	used := int64(2500)
+	util := 25.0
+	decimals := 2
+	extra := &claudeExtraUsage{
+		IsEnabled:     true,
+		MonthlyLimit:  &limit,
+		UsedCredits:   &used,
+		Utilization:   &util,
+		DecimalPlaces: &decimals,
+	}
+	spend := &claudeSpend{CanPurchaseCredits: true}
+
+	got := claudeUsageCreditsLine(extra, spend)
+	want := "usage credits: on, $25.00 of $100.00 this month (25%) (can buy)"
+	if got != want {
+		t.Errorf("claudeUsageCreditsLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeUsageCreditsLine_EnabledNoLimit(t *testing.T) {
+	used := int64(500)
+	decimals := 2
+	extra := &claudeExtraUsage{
+		IsEnabled:     true,
+		UsedCredits:   &used,
+		DecimalPlaces: &decimals,
+	}
+
+	got := claudeUsageCreditsLine(extra, nil)
+	want := "usage credits: on, $5.00 used"
+	if got != want {
+		t.Errorf("claudeUsageCreditsLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeUsageCreditsLine_OffByChoice(t *testing.T) {
+	extra := &claudeExtraUsage{
+		IsEnabled:          false,
+		UserDisabled:       true,
+		CreditsEverEnabled: true,
+		SpendLimitReached:  true,
+	}
+	balance := &claudeMoneyAmount{AmountMinor: 500, Currency: "USD", Exponent: 2}
+	spend := &claudeSpend{Balance: balance}
+
+	got := claudeUsageCreditsLine(extra, spend)
+	want := "usage credits: off by choice, balance $5.00, spend limit reached"
+	if got != want {
+		t.Errorf("claudeUsageCreditsLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeUsageCreditsLine_OffByChoiceRealPayload(t *testing.T) {
+	// The real payload shape captured 2026-09-24: is_enabled false,
+	// user_disabled true, credits_ever_enabled true, everything else
+	// null. This is Ryan's actual account state.
+	const raw = `{"is_enabled": false, "monthly_limit": null, "used_credits": null, "utilization": null, "currency": null, "decimal_places": null, "disabled_reason": null, "user_disabled": true, "spend_limit_reached": false, "credits_ever_enabled": true, "daily": null, "weekly": null}`
+	var extra claudeExtraUsage
+	if err := json.Unmarshal([]byte(raw), &extra); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+	const spendRaw = `{"used": {"amount_minor": 0, "currency": "USD", "exponent": 2}, "limit": null, "percent": 0, "severity": "normal", "enabled": false, "disabled_reason": null, "cap": null, "balance": null, "auto_reload": null, "disclaimer": "x", "can_purchase_credits": false, "can_toggle": false}`
+	var spend claudeSpend
+	if err := json.Unmarshal([]byte(spendRaw), &spend); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+
+	got := claudeUsageCreditsLine(&extra, &spend)
+	want := "usage credits: off by choice"
+	if got != want {
+		t.Errorf("claudeUsageCreditsLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeUsageCreditsLine_NeverEnabled(t *testing.T) {
+	extra := &claudeExtraUsage{
+		IsEnabled:          false,
+		UserDisabled:       false,
+		CreditsEverEnabled: false,
+	}
+	got := claudeUsageCreditsLine(extra, nil)
+	want := "usage credits: not enabled"
+	if got != want {
+		t.Errorf("claudeUsageCreditsLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeUsageCreditsLine_Nil(t *testing.T) {
+	if got := claudeUsageCreditsLine(nil, nil); got != "" {
+		t.Errorf("claudeUsageCreditsLine(nil, nil) = %q, want empty", got)
+	}
+}
+
+func TestClaudeSevenDayBreakdownLine(t *testing.T) {
+	b := &claudeSevenDayBreakdown{
+		Rows: []claudeBreakdownRow{
+			{Key: "claude_code", DisplayName: "Claude Code", Percent: 100},
+			{Key: "chat", DisplayName: "Chats", Percent: 0},
+			{Key: "cowork", DisplayName: "Cowork", Percent: 0},
+			{Key: "other", DisplayName: "Other", Percent: 0},
+		},
+	}
+	got := claudeSevenDayBreakdownLine(b)
+	want := "7-day by surface: Claude Code 100%, Chats 0%, Cowork 0%, Other 0%"
+	if got != want {
+		t.Errorf("claudeSevenDayBreakdownLine() = %q, want %q", got, want)
+	}
+}
+
+func TestClaudeSevenDayBreakdownLine_Empty(t *testing.T) {
+	if got := claudeSevenDayBreakdownLine(nil); got != "" {
+		t.Errorf("claudeSevenDayBreakdownLine(nil) = %q, want empty", got)
+	}
+	if got := claudeSevenDayBreakdownLine(&claudeSevenDayBreakdown{}); got != "" {
+		t.Errorf("claudeSevenDayBreakdownLine(empty) = %q, want empty", got)
+	}
+}
+
+func TestMapClaudeUsage_AllExtraFieldsNil(t *testing.T) {
+	const raw = `{
+	  "limits": [{"kind": "session", "percent": 10, "severity": "normal", "resets_at": "2026-09-24T18:00:00Z", "is_active": true}],
+	  "extra_usage": null,
+	  "spend": null,
+	  "seven_day_breakdown": null
+	}`
+	var resp claudeUsageResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("unmarshal fixture: %v", err)
+	}
+	if resp.ExtraUsage != nil || resp.Spend != nil || resp.SevenDayBreakdown != nil {
+		t.Fatalf("expected all three pointer fields nil, got %+v %+v %+v", resp.ExtraUsage, resp.Spend, resp.SevenDayBreakdown)
+	}
+	if line := claudeUsageCreditsLine(resp.ExtraUsage, resp.Spend); line != "" {
+		t.Errorf("claudeUsageCreditsLine() = %q, want empty when extra_usage is null", line)
+	}
+	if line := claudeSevenDayBreakdownLine(resp.SevenDayBreakdown); line != "" {
+		t.Errorf("claudeSevenDayBreakdownLine() = %q, want empty when seven_day_breakdown is null", line)
+	}
+}
+
 func TestLoadClaudeCredentials_FileOverridesKeychain(t *testing.T) {
 	// A ClaudeConfig with CredentialsFile set (and no SSHHost) must read
 	// the local file, never touch the keychain -- there's no keychain in
