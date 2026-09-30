@@ -190,6 +190,13 @@ func (db *DB) migrate() error {
 	// see git history) that walked the brain repo's git log.
 	db.conn.Exec(`ALTER TABLE tasks ADD COLUMN completed_at TEXT DEFAULT ''`)
 
+	// Idempotent: add claimed_by/lease_until columns if missing. Mirrors
+	// the internal/taskstate git-ref lease for humans reading brain.db-
+	// backed task views (docs/arbiter-plan.md section 6). Same pattern
+	// as completed_at above - ALTER errors on duplicate column ignored.
+	db.conn.Exec(`ALTER TABLE tasks ADD COLUMN claimed_by TEXT DEFAULT ''`)
+	db.conn.Exec(`ALTER TABLE tasks ADD COLUMN lease_until TEXT DEFAULT ''`)
+
 	// Action #1a: typed memory schema. Stores facts/events/instructions as
 	// a unified table with supersession-by-key (active row per (type, key,
 	// profile); older rows have superseded_by set to the newer record's id).
@@ -818,6 +825,12 @@ type TaskRecord struct {
 	Description string   `json:"description"`
 	IssueNumber int      `json:"issue_number,omitempty"`
 	TaskID      int      `json:"task_id,omitempty"`
+	// ClaimedBy/LeaseUntil mirror the arbiter's git-ref lease
+	// (internal/taskstate) for humans - see taskFrontmatter's doc
+	// comment in tasks.go. Best-effort, not authoritative: the lease
+	// ref itself is the source of truth.
+	ClaimedBy  string `json:"claimed_by,omitempty"`
+	LeaseUntil string `json:"lease_until,omitempty"`
 }
 
 // PriorityTag returns the highest priority tag (p1 > p2 > p3), or "p3" if none.
@@ -860,19 +873,20 @@ func (db *DB) UpsertTask(t *TaskRecord) error {
 		completed = 1
 	}
 	_, err := db.conn.Exec(`
-		INSERT INTO tasks (slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, completed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO tasks (slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, completed_at, claimed_by, lease_until)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(slug) DO UPDATE SET
 			title=excluded.title, status=excluded.status, completed=excluded.completed,
 			tags=excluded.tags, created=excluded.created, page_path=excluded.page_path,
 			description=excluded.description, issue_number=excluded.issue_number,
 			completed_at=excluded.completed_at,
+			claimed_by=excluded.claimed_by, lease_until=excluded.lease_until,
 			task_id = CASE
 				WHEN excluded.task_id > 0 THEN excluded.task_id
 				WHEN tasks.task_id > 0 THEN tasks.task_id
 				ELSE excluded.task_id
 			END`,
-		t.Slug, t.Title, t.Status, completed, string(tags), t.Created, t.PagePath, t.Description, t.IssueNumber, t.TaskID, t.CompletedAt,
+		t.Slug, t.Title, t.Status, completed, string(tags), t.Created, t.PagePath, t.Description, t.IssueNumber, t.TaskID, t.CompletedAt, t.ClaimedBy, t.LeaseUntil,
 	)
 	if err != nil {
 		return err
@@ -926,16 +940,18 @@ func (db *DB) GetTaskByID(taskID int) (*TaskRecord, error) {
 	var t TaskRecord
 	var tagsJSON string
 	var completed int
-	var completedAt sql.NullString
+	var completedAt, claimedBy, leaseUntil sql.NullString
 	err := db.conn.QueryRow(
-		"SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, '') FROM tasks WHERE task_id = ?",
+		"SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, ''), COALESCE(claimed_by, ''), COALESCE(lease_until, '') FROM tasks WHERE task_id = ?",
 		taskID,
-	).Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt)
+	).Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt, &claimedBy, &leaseUntil)
 	if err != nil {
 		return nil, err
 	}
 	t.Completed = completed != 0
 	t.CompletedAt = completedAt.String
+	t.ClaimedBy = claimedBy.String
+	t.LeaseUntil = leaseUntil.String
 	json.Unmarshal([]byte(tagsJSON), &t.Tags)
 	return &t, nil
 }
@@ -955,7 +971,7 @@ func (db *DB) GetTaskByID(taskID int) (*TaskRecord, error) {
 // profile-tag convention aren't lost. Pass "" to disable isolation -
 // reserved for explicit cross-profile views (`aida tasks --all-profiles`).
 func (db *DB) ListTasks(showCompleted bool, tags []string, days, limit int, profileIsolation string, statuses []string) ([]TaskRecord, error) {
-	query := "SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, '') FROM tasks"
+	query := "SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, ''), COALESCE(claimed_by, ''), COALESCE(lease_until, '') FROM tasks"
 	var conditions []string
 	var args []interface{}
 
@@ -998,12 +1014,14 @@ func (db *DB) ListTasks(showCompleted bool, tags []string, days, limit int, prof
 		var t TaskRecord
 		var tagsJSON string
 		var completed int
-		var completedAt sql.NullString
-		if err := rows.Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt); err != nil {
+		var completedAt, claimedBy, leaseUntil sql.NullString
+		if err := rows.Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt, &claimedBy, &leaseUntil); err != nil {
 			continue
 		}
 		t.Completed = completed != 0
 		t.CompletedAt = completedAt.String
+		t.ClaimedBy = claimedBy.String
+		t.LeaseUntil = leaseUntil.String
 		json.Unmarshal([]byte(tagsJSON), &t.Tags)
 
 		// Hard profile isolation - applied before any other filter so a
@@ -1072,16 +1090,18 @@ func (db *DB) GetTask(slug string) (*TaskRecord, error) {
 	var t TaskRecord
 	var tagsJSON string
 	var completed int
-	var completedAt sql.NullString
+	var completedAt, claimedBy, leaseUntil sql.NullString
 	err := db.conn.QueryRow(
-		"SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, '') FROM tasks WHERE slug = ?",
+		"SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, ''), COALESCE(claimed_by, ''), COALESCE(lease_until, '') FROM tasks WHERE slug = ?",
 		slug,
-	).Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt)
+	).Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt, &claimedBy, &leaseUntil)
 	if err != nil {
 		return nil, err
 	}
 	t.Completed = completed != 0
 	t.CompletedAt = completedAt.String
+	t.ClaimedBy = claimedBy.String
+	t.LeaseUntil = leaseUntil.String
 	json.Unmarshal([]byte(tagsJSON), &t.Tags)
 	return &t, nil
 }
@@ -1097,7 +1117,7 @@ func (db *DB) FindTaskByPartialSlug(partial string) (*TaskRecord, error) {
 }
 
 func (db *DB) findTaskByPartialSlug(partial string, openOnly bool) (*TaskRecord, error) {
-	query := "SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, '') FROM tasks WHERE slug LIKE ?"
+	query := "SELECT slug, title, status, completed, tags, created, page_path, description, issue_number, task_id, COALESCE(completed_at, ''), COALESCE(claimed_by, ''), COALESCE(lease_until, '') FROM tasks WHERE slug LIKE ?"
 	if openOnly {
 		query += " AND completed = 0"
 	}
@@ -1112,12 +1132,14 @@ func (db *DB) findTaskByPartialSlug(partial string, openOnly bool) (*TaskRecord,
 		var t TaskRecord
 		var tagsJSON string
 		var completed int
-		var completedAt sql.NullString
-		if err := rows.Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt); err != nil {
+		var completedAt, claimedBy, leaseUntil sql.NullString
+		if err := rows.Scan(&t.Slug, &t.Title, &t.Status, &completed, &tagsJSON, &t.Created, &t.PagePath, &t.Description, &t.IssueNumber, &t.TaskID, &completedAt, &claimedBy, &leaseUntil); err != nil {
 			continue
 		}
 		t.Completed = completed != 0
 		t.CompletedAt = completedAt.String
+		t.ClaimedBy = claimedBy.String
+		t.LeaseUntil = leaseUntil.String
 		json.Unmarshal([]byte(tagsJSON), &t.Tags)
 		matches = append(matches, t)
 	}

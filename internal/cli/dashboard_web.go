@@ -11,12 +11,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/ryanlitalien/aida/internal/arbiter"
 	"github.com/ryanlitalien/aida/internal/bifrost"
 	"github.com/ryanlitalien/aida/internal/brain"
 	"github.com/ryanlitalien/aida/internal/config"
@@ -74,6 +76,13 @@ type dashboardDeps struct {
 	// ModelsPath is the AI provider/plan/nickname roster YAML
 	// (config.Config.ModelsPath) the Models panel's GET /api/models reads.
 	ModelsPath string
+	// ArbiterStateDir is where `aida serve --arbiter` (serve_arbiter.go)
+	// writes scheduler.json/last-wave.json, and where internal/arbiter's
+	// Store keeps lane-state.json/signals.ndjson - the same directory
+	// newArbiterRuntime and runArbiterScheduler both use. GET /api/arbiter
+	// reads it directly; a scheduler that has never run on this box just
+	// means every file is missing, which the readers degrade on.
+	ArbiterStateDir string
 }
 
 // newDashboardDeps assembles the dashboard/bifrost dependencies from
@@ -124,6 +133,7 @@ func newDashboardDeps(cfg *config.Config, b *brain.Brain, jobsStore *jobs.Store,
 		Machine:          machine,
 		Started:          started,
 		ModelsPath:       cfg.ModelsPath(),
+		ArbiterStateDir:  filepath.Join(config.Dir(), "arbiter"),
 	}, cache
 }
 
@@ -262,7 +272,56 @@ func registerDashboardRoutes(mux *http.ServeMux, d dashboardDeps) {
 
 	registerModelsRoutes(handle, d.ModelsPath, modelsProbeAdapter)
 
+	// Arbiter panel: read-only over the scheduler's own state files
+	// (scheduler.json, last-wave.json, lane-state.json under
+	// d.ArbiterStateDir - see serve_arbiter.go). No probe, no spawn; a
+	// missing state directory (the scheduler has never run on this box)
+	// degrades to zero-value fields rather than an error.
+	handle("GET /api/arbiter", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		resp, err := buildArbiterAPIResponse(d.ArbiterStateDir)
+		if err != nil {
+			httpError(w, http.StatusInternalServerError, "reading arbiter state: "+err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, resp)
+	})
+
 	registerBifrostRoutes(handle, d.Bifrost, d.BifrostLaneOrder)
+}
+
+// arbiterAPIResponse is GET /api/arbiter's payload - the scheduler state,
+// the last wave summary (nil when none has ever run), current lane
+// marks, and the next wake instant pulled out for convenience (it's also
+// on Scheduler.NextWake, but the dashboard card reads it directly).
+type arbiterAPIResponse struct {
+	Scheduler schedulerState       `json:"scheduler"`
+	LastWave  *arbiter.WaveSummary `json:"last_wave,omitempty"`
+	LaneMarks []laneMarkView       `json:"lane_marks"`
+	NextWake  time.Time            `json:"next_wake,omitempty"`
+}
+
+// buildArbiterAPIResponse assembles arbiterAPIResponse purely from the
+// state files under dir - no live capacity probe (unlike `aida arbiter
+// status`), so the dashboard's poll stays cheap.
+func buildArbiterAPIResponse(dir string) (arbiterAPIResponse, error) {
+	sched, err := readSchedulerState(dir)
+	if err != nil {
+		return arbiterAPIResponse{}, err
+	}
+	marks, err := readLaneMarks(dir)
+	if err != nil {
+		return arbiterAPIResponse{}, err
+	}
+	wave, haveWave, err := readWaveSummary(dir)
+	if err != nil {
+		return arbiterAPIResponse{}, err
+	}
+	resp := arbiterAPIResponse{Scheduler: sched, LaneMarks: marks, NextWake: sched.NextWake}
+	if haveWave {
+		resp.LastWave = &wave
+	}
+	return resp, nil
 }
 
 // htmlPageHandler serves a static embedded HTML page, mirroring the

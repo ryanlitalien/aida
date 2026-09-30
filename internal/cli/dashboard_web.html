@@ -350,6 +350,8 @@ const state = reactive({
   models: null,
   modelsErr: '',
   modelsBusy: false,
+  arbiter: null,
+  arbiterErr: '',
 });
 
 // ---- helpers ----
@@ -450,6 +452,17 @@ async function loadModels() {
     state.modelsErr = '';
   } catch (e) {
     state.modelsErr = 'Failed to load models: ' + e.message;
+  }
+}
+
+async function loadArbiter() {
+  try {
+    const r = await fetch('/api/arbiter');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    state.arbiter = await r.json();
+    state.arbiterErr = '';
+  } catch (e) {
+    state.arbiterErr = 'Failed to load arbiter: ' + e.message;
   }
 }
 
@@ -960,12 +973,54 @@ function modelsSection() {
   `;
 }
 
+// ---- Arbiter ----
+
+// arbiterLaneMarkRow renders one lane's current empty mark - a lane with
+// no mark at all never appears here, so an empty list means "nothing is
+// currently signalled empty," not "no data."
+function arbiterLaneMarkRow(m) {
+  return html`
+    <li>${m.lane}: empty until ${new Date(m.empty_until).toLocaleString()} (${m.source}${m.ambiguous ? ', ambiguous' : ''})</li>
+  `.key(m.lane);
+}
+
+function arbiterSection() {
+  return html`
+    <section class="panel">
+      <div class="panel-head"><h2>Arbiter</h2></div>
+      ${() => state.arbiterErr ? html`<div class="banner err">${state.arbiterErr}</div>` : ''}
+      ${() => {
+        if (!state.arbiter) return state.arbiterErr ? '' : html`<div class="empty">Loading…</div>`;
+        const a = state.arbiter;
+        const sched = a.scheduler || {};
+        const wave = a.last_wave;
+        const marks = a.lane_marks || [];
+        return html`
+          <div class="stat-grid">
+            <div class="stat"><span class="stat-n">${sched.state || 'unknown'}</span><span class="stat-l">scheduler state</span></div>
+            <div class="stat"><span class="stat-n">${a.next_wake ? new Date(a.next_wake).toLocaleString() : ' - '}</span><span class="stat-l">next wake</span></div>
+            <div class="stat"><span class="stat-n">${wave ? wave.tasks : 0}</span><span class="stat-l">last wave tasks</span></div>
+            <div class="stat"><span class="stat-n">${wave ? wave.passed : 0}</span><span class="stat-l">passed</span></div>
+            <div class="stat"><span class="stat-n">${wave ? wave.held : 0}</span><span class="stat-l">held</span></div>
+          </div>
+          <div class="brain-foot muted">
+            ${sched.reason ? html`<span>reason: ${sched.reason}</span>` : ''}
+            <span>${marks.length ? marks.length + ' lane(s) marked empty' : 'no lanes marked empty'}</span>
+          </div>
+          ${() => marks.length ? html`<ul class="model-guidance">${marks.map(m => arbiterLaneMarkRow(m))}</ul>` : ''}
+        `;
+      }}
+    </section>
+  `;
+}
+
 // ---- App ----
 
 function App() {
   return html`
     ${fleetSection()}
     ${modelsSection()}
+    ${arbiterSection()}
     ${jobsSection()}
     ${brainSection()}
     ${flowSection()}
@@ -981,6 +1036,7 @@ loadRuns();
 loadBrain();
 loadFlow();
 loadModels();
+loadArbiter();
 setInterval(() => { if (!document.hidden) loadFleet(); }, 10000);
 setInterval(() => { if (!document.hidden) loadRuns(); }, 5000);
 setInterval(() => { if (!document.hidden) loadBrain(); }, 30000);
@@ -989,6 +1045,10 @@ setInterval(() => { if (!document.hidden) loadFlow(); }, 30000);
 // modelsCacheTTL in models_web.go), so polling every 30s here mostly
 // hits that cache rather than re-running keychain/ssh/network probes.
 setInterval(() => { if (!document.hidden) loadModels(); }, 30000);
+// GET /api/arbiter is a plain file read (no probe), but the scheduler's
+// state changes at most once a minute, so 30s keeps the card fresh
+// without polling harder than the data can actually change.
+setInterval(() => { if (!document.hidden) loadArbiter(); }, 30000);
 
 // The polls above are gated on document.hidden so a forgotten background
 // tab does not keep firing ssh probes at the fleet. The cost of that is
@@ -1001,6 +1061,7 @@ document.addEventListener('visibilitychange', () => {
   loadFlow();
   loadRuns();
   loadModels();
+  loadArbiter();
 });
 </script>
 </body>

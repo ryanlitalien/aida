@@ -1405,3 +1405,136 @@ func taskSlugsFromRecords(tasks []TaskRecord) []string {
 	}
 	return out
 }
+
+// TestLeaseMirror_RoundTrip covers the internal/taskstate lease mirror
+// added to taskFrontmatter/TaskRecord: claimed_by/lease_until round-trip
+// through the task markdown file (writeTaskFile/parseTaskFile), through
+// brain.db (UpsertTask/GetTask), and through UpdateTask's TaskPatch
+// (set, then cleared with an empty string, which must NOT be confused
+// with "unchanged" - nil is unchanged, empty string clears).
+func TestLeaseMirror_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "tasks"), 0755)
+
+	path := filepath.Join(dir, "tasks", "lease-test.md")
+	rec := &TaskRecord{
+		Slug:       "lease-test",
+		Title:      "Lease mirror",
+		Status:     StatusOpen,
+		Created:    "2026-09-24T00:00:00Z",
+		TaskID:     501,
+		ClaimedBy:  "claude-max@edith",
+		LeaseUntil: "2026-09-24T05:00:00Z",
+	}
+	if err := writeTaskFile(path, rec, ""); err != nil {
+		t.Fatalf("writeTaskFile: %v", err)
+	}
+
+	got, _, err := parseTaskFile(path)
+	if err != nil {
+		t.Fatalf("parseTaskFile: %v", err)
+	}
+	if got.ClaimedBy != rec.ClaimedBy || got.LeaseUntil != rec.LeaseUntil {
+		t.Errorf("file round-trip mismatch: ClaimedBy=%q LeaseUntil=%q, want %q / %q",
+			got.ClaimedBy, got.LeaseUntil, rec.ClaimedBy, rec.LeaseUntil)
+	}
+
+	// Empty values should round-trip as empty and not appear in the file
+	// (omitempty), matching the completed_at convention above.
+	rec.ClaimedBy = ""
+	rec.LeaseUntil = ""
+	if err := writeTaskFile(path, rec, ""); err != nil {
+		t.Fatalf("writeTaskFile (empty lease): %v", err)
+	}
+	got, _, err = parseTaskFile(path)
+	if err != nil {
+		t.Fatalf("parseTaskFile (empty lease): %v", err)
+	}
+	if got.ClaimedBy != "" || got.LeaseUntil != "" {
+		t.Errorf("empty lease round-trip = %q / %q, want empty/empty", got.ClaimedBy, got.LeaseUntil)
+	}
+	raw, _ := os.ReadFile(path)
+	if strings.Contains(string(raw), "claimed_by:") || strings.Contains(string(raw), "lease_until:") {
+		t.Errorf("empty lease fields should not write their keys; file:\n%s", string(raw))
+	}
+
+	// brain.db round-trip via UpsertTask/GetTask.
+	db, err := OpenDB(dir)
+	if err != nil {
+		t.Fatalf("OpenDB: %v", err)
+	}
+	defer db.Close()
+	rec.ClaimedBy = "claude-max@edith"
+	rec.LeaseUntil = "2026-09-24T05:00:00Z"
+	rec.PagePath = filepath.Join("tasks", "lease-test.md")
+	if err := db.UpsertTask(rec); err != nil {
+		t.Fatalf("UpsertTask: %v", err)
+	}
+	// UpdateTask (below) reads current values from the file, not the DB,
+	// so keep the two in sync the way a real claim/release would (write
+	// both together).
+	if err := writeTaskFile(path, rec, ""); err != nil {
+		t.Fatalf("writeTaskFile (sync lease to file): %v", err)
+	}
+	dbRec, err := db.GetTask("lease-test")
+	if err != nil {
+		t.Fatalf("GetTask: %v", err)
+	}
+	if dbRec.ClaimedBy != rec.ClaimedBy || dbRec.LeaseUntil != rec.LeaseUntil {
+		t.Errorf("db round-trip mismatch: ClaimedBy=%q LeaseUntil=%q, want %q / %q",
+			dbRec.ClaimedBy, dbRec.LeaseUntil, rec.ClaimedBy, rec.LeaseUntil)
+	}
+	byID, err := db.GetTaskByID(501)
+	if err != nil {
+		t.Fatalf("GetTaskByID: %v", err)
+	}
+	if byID.ClaimedBy != rec.ClaimedBy || byID.LeaseUntil != rec.LeaseUntil {
+		t.Errorf("GetTaskByID lease mismatch: ClaimedBy=%q LeaseUntil=%q", byID.ClaimedBy, byID.LeaseUntil)
+	}
+	list, err := db.ListTasks(false, nil, 0, 0, "", nil)
+	if err != nil {
+		t.Fatalf("ListTasks: %v", err)
+	}
+	found := false
+	for _, tr := range list {
+		if tr.Slug == "lease-test" {
+			found = true
+			if tr.ClaimedBy != rec.ClaimedBy || tr.LeaseUntil != rec.LeaseUntil {
+				t.Errorf("ListTasks lease mismatch: ClaimedBy=%q LeaseUntil=%q", tr.ClaimedBy, tr.LeaseUntil)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("ListTasks did not return lease-test")
+	}
+
+	// UpdateTask: nil leaves the lease fields unchanged, an empty string
+	// clears them (a Release should be able to clear without touching
+	// unrelated fields).
+	b := &Brain{Path: dir, DB: db, Embeddings: NewEmbeddingClient(""), profile: "test"}
+	unchanged, err := b.UpdateTask("lease-test", TaskPatch{Title: strPtr("Lease mirror renamed")})
+	if err != nil {
+		t.Fatalf("UpdateTask (nil lease patch): %v", err)
+	}
+	if unchanged.ClaimedBy != rec.ClaimedBy || unchanged.LeaseUntil != rec.LeaseUntil {
+		t.Errorf("nil lease patch changed lease fields: ClaimedBy=%q LeaseUntil=%q", unchanged.ClaimedBy, unchanged.LeaseUntil)
+	}
+
+	cleared, err := b.UpdateTask("lease-test", TaskPatch{ClaimedBy: strPtr(""), LeaseUntil: strPtr("")})
+	if err != nil {
+		t.Fatalf("UpdateTask (clear lease): %v", err)
+	}
+	if cleared.ClaimedBy != "" || cleared.LeaseUntil != "" {
+		t.Errorf("cleared lease patch = %q / %q, want empty/empty", cleared.ClaimedBy, cleared.LeaseUntil)
+	}
+
+	afterClear, err := db.GetTask("lease-test")
+	if err != nil {
+		t.Fatalf("GetTask after clear: %v", err)
+	}
+	if afterClear.ClaimedBy != "" || afterClear.LeaseUntil != "" {
+		t.Errorf("db after clear = %q / %q, want empty/empty", afterClear.ClaimedBy, afterClear.LeaseUntil)
+	}
+}
+
+func strPtr(s string) *string { return &s }
