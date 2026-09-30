@@ -76,6 +76,7 @@ Flags: `--http` forces HTTP mode; `--no-listen` disables the mic; `--no-jarvis` 
 | `--loop-sandbox` | `--sandbox` | confine looped agents: `none` \| `docker` (requires `--loop-worktree`) |
 | `--loop-sandbox-memory` | `--sandbox-memory` | docker sandbox memory limit, e.g. `8g` |
 | `--loop-provision-aida` | `--provision-aida` | prebuilt linux/arm64 `aida` for the docker sandbox (needed when serve runs outside the aida checkout) |
+| `--loop-arbiter` | `--arbiter` | consult the capacity view and run each looped attempt on the cheapest eligible lane; on by default, `--loop-arbiter=false` reverts to the metered `aida --agent` path |
 
 These mirror only the high-value standalone-loop flags; everything else (`--max-iterations`, `--max-fix-iterations`, `--recall-k`, `--per-task-timeout`, `--base`, `--review-panel`, `--max-budget-usd`, `--max-consecutive-failures`, `--poll`) takes the same defaults documented in the flag table under "Autonomous loop surface" below; run `aida loop` standalone for finer control over those.
 
@@ -276,6 +277,11 @@ A Ralph-style autonomous driver: a deterministic outer loop that repeatedly spaw
 | `--provision-aida <path>` | (none) | prebuilt linux/arm64 `aida` to copy into the docker sandbox (default: auto-build) |
 | `--recall-k N` | 3 | similar brain lessons seeded into each fresh agent |
 | `--per-task-timeout` | 7m30s | per-iteration agent timeout |
+| `--arbiter` | true | consult the capacity view and run each attempt on the cheapest eligible lane; refuse to spawn when no lane has headroom; `--arbiter=false` reverts to the metered `aida --agent` path |
+| `--lease-ttl` | 15m | how long a claimed task's lease lasts before it must be renewed (`--arbiter`) |
+| `--handoff-max-age` | 2h | max age of a HANDOFF.md before it is considered stale (`--arbiter`; 0 disables the age check) |
+| `--no-lane-wait` | 5m | in `--daemon` mode, how long to sleep when no lane has headroom for any task (`--arbiter`) |
+| `--lease-remote` | origin | the brain repo remote the lease refs (`refs/leases/<slug>`) live on (`--arbiter`) |
 | `--dry-run` (global) | (none) | print the task(s) it would pick; no spawn, no mutation |
 
 `aida loop plan` flags: `--tag` (default `loop`), `--max-tasks N` (0 = no cap), `--dry-run`.
@@ -289,11 +295,61 @@ aida loop --tag prio --check "make test"
 ```
 Safe by default: `--commit` and `--pr` off, failures park the task on `hold` (no silent re-spin). Worktree isolation and budget/circuit-breaker stops have landed (`--worktree`, `--max-budget-usd`, `--max-consecutive-failures`); a loop-specific decomposition prompt (dependency ordering, one-iteration sizing, verifiable acceptance criteria) is still TODO (see the design doc).
 
+### Arbiter mode (`--arbiter`)
+
+`--arbiter` is on by default (2026-09-25, superseding docs/adr/0002's original off-by-default): each attempt asks the capacity view for the cheapest lane with headroom for the task's data class and runs on that lane's own CLI instead of the metered `aida --agent` path, refusing to spawn at all when nothing is eligible. `defaultLoopOpts()` carries this default into every caller, not just `aida loop`'s own flag, so `aida serve --loop` and `aida swarm` are enforced too unless told otherwise.
+
+`--arbiter=false` (or `--loop-arbiter=false` on `aida serve`) reverts to the old always-metered path, with `aida loop` behaving exactly as described above.
+
+Enforcement requires a real lane roster at `~/.aida/lanes.yaml`; a missing file is an error naming the path to create, both from `aida loop --arbiter` and from `aida serve --loop` at startup (before the daemon binds its port), never a silent fallback to `arbiter.DefaultConfig()`'s placeholder roster. Copy `examples/lanes.yaml` there and edit it; `aida arbiter lanes --example` prints the placeholder roster without touching disk, and `aida arbiter lanes --lint` validates a real one. `examples/lanes.yaml` and `arbiter.DefaultConfig()` are a generic, vendor-shaped placeholder roster for the repo, not any one machine's real lanes; the real roster is hand-maintained at `~/.aida/lanes.yaml` and never committed.
+
+The loop claims a task with a cross-machine git-ref lease before working it, so two machines never work the same task at once; the lease lives on `refs/leases/<slug>` and is renewed in the background while the task runs.
+
+Per-task progress lives in STATE.json under `<brain>/arbiter/<slug>/`, written only by the harness loop, never by the model.
+
+Done only ever means the acceptance gate passed (the existing `--check` commands plus any `## Deliverables` named in the task body), never a model's own claim of completion.
+
+When the picked lane nears exhaustion the harness arms a HANDOFF.md at the 90 percent mark so a lane switch resumes the task on the next model instead of restarting it from scratch.
+
+A lane's own rate-limit signal fails open: an empty or ambiguous signal is logged to `~/.aida/arbiter/signals.ndjson` and the loop moves to the next lane rather than guessing the lane still has room.
+
+Every attempt appends one line to `~/.aida/arbiter/ledger.ndjson` with the lane, model, verdict, cost, and capacity before and after.
+
+Lane enforcement ships behind this flag and is on by default per the 2026-09-25 decision superseding docs/adr/0002; the flag stays as the escape hatch.
+
+### Overnight scheduler (`aida serve --arbiter`)
+
+Unlike `--loop-arbiter` (lane enforcement inside the plain loop, on by default), the overnight scheduler itself is opt-in: pass `--arbiter` to `aida serve` to run it as a background goroutine. It wakes on a plan rather than running continuously, builds a wave of tasks with a machine verifier, preflights the cheapest personal lane, and runs the wave through the same arbiter-enforced loop `aida loop --arbiter` uses. `--arbiter` and `--loop` are mutually exclusive - the plan is explicit that the scheduler and the plain daemon-hosted loop must never dispatch over the same task set at once; `aida serve` refuses to start with both set.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--arbiter` | false | enable the scheduler |
+| `--arbiter-tag` (repeatable) | (none) | only schedule tasks carrying ALL of these tags |
+| `--arbiter-check` (repeatable) | (none) | quality-gate command run after each scheduled attempt; also counts as a task's machine verifier |
+| `--arbiter-nightly-at` | 23:00 | 24-hour HH:MM the scheduler always wakes at |
+| `--arbiter-weekly-drain` | 24h | how far ahead of a 7-day window's reset counts as its own wake trigger |
+| `--arbiter-require-verifier` | true | skip a task with no `--arbiter-check` and no `## Deliverables` |
+| `--arbiter-worktree` | true | run each scheduled task in an isolated worktree |
+| `--arbiter-pr` | false | open a PR per passing scheduled task (implies `--arbiter-worktree`) |
+| `--arbiter-reviewer` | (none) | GitHub handle to request review from on scheduled PRs |
+| `--arbiter-concurrency` | 1 | work up to N scheduled tasks in parallel |
+| `--arbiter-preflight-timeout` | 60s | timeout for the lane-1 preflight turn run before each wave |
+
+The wake rule: the scheduler runs a wave at 23:00 nightly, in the last 24 hours before any 7-day window's reset (that window drains to zero right up to reset regardless of time of day), and whenever a window's own reset just opened new headroom. Outside those triggers it sleeps until the earliest of the next nightly wake, the next weekly-drain trigger, or the next window reset.
+
+A task only ever enters an unattended wave if it carries a machine verifier: a configured `--arbiter-check`, or a `## Deliverables` section in the task body. No verifier means no unattended run, by design - a model's own claim of "done" is never enough (see "Arbiter mode" above).
+
+Before committing to a wave, the scheduler runs a trivial preflight turn on the cheapest lane that allows personal data. A failed preflight (an expired OAuth session, a revoked key) speaks an alert and marks that lane empty until the next wake, so the wave's own lane picker skips straight to the next cheapest lane instead of burning the first task's attempt discovering the same failure.
+
+When a wave finishes, the scheduler speaks a short morning utterance summarizing task counts and window deltas (e.g. "Overnight wave done: 4 tasks, 3 passed, 1 on hold. Claude Max 5-hour went from 12 to 71 percent used.").
+
+Two state files live under `~/.aida/arbiter/` alongside the existing signals/ledger: `scheduler.json` (current state - sleeping, running, or idle - plus the next wake instant and why) and `last-wave.json` (the most recent wave's full summary). `aida arbiter status` and the dashboard's Arbiter panel both read these directly rather than probing anything live.
+
 ## Burn-down capacity (`aida burndown`)
 
 > Package: `internal/burndown/`. Design: a burn-down design doc that lives only on another branch (piece #1, "Capacity view"), not part of this repo.
 
-`aida burndown capacity` is a read-only view over the AI model roster's live usage: for every rate-limit window (and every LiteLLM/budget row), it reports how much is left, the effective floor Ryan's own reserve requires right now, and the headroom above that floor an unattended burn-down loop could safely spend. That's all that exists today. There is no picker, no scheduler, no `aida serve --burndown`, no runners, no ledger, and nothing here dispatches an agent or mutates a task.
+`aida burndown capacity` is a read-only view over the AI model roster's live usage: for every rate-limit window (and every LiteLLM/budget row), it reports how much is left, the effective floor Ryan's own reserve requires right now, and the headroom above that floor an unattended burn-down loop could safely spend. This package is only the view; nothing in it dispatches an agent or mutates a task. The picker, lane roster, signals, ledger and runners live in `internal/arbiter` and are enforced by `aida loop --arbiter` (see "Arbiter mode" above); there is still no scheduler (`aida serve --arbiter`).
 
 The floor rule (`internal/burndown/capacity.go`'s `CapacityFor`): start from a static floor configured per window and time of day (daytime, overnight, or the last 24h before a weekly reset), forcing it to 0 ("drain-to-zero") when the window resets before the end of the configured overnight period, since anything left would just expire unused. Once a window carries a real burn-pace verdict (`internal/models/pace.go`'s `PaceFor`, i.e. not `PaceEarly` and not a sub-24h window), that static floor is replaced by a pace-derived one instead: `floor = clamp(max(0, Pace.Projected - used%) * safety_multiplier, hard_floor, left%)`, since the live pace is a better estimate of what Ryan's own usage needs than a fixed percentage. A window's `hard_floor`, when configured, always wins, even over drain-to-zero (Fable's 7-day bar never drops below 50%, any day, even on a night it resets). A budget row's `floor_usd` (`CapacityForSpend`) is the same kind of hard floor: pace can raise it but never lower it below floor_usd's percent-of-budget equivalent, since the LiteLLM reserve it protects exists for bursty, unscheduled Jarvis turns and browser jobs that never register in a pace reading.
 

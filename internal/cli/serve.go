@@ -50,6 +50,7 @@ func newServeCmd() *cobra.Command {
 	var enableLoop bool
 	loopO := defaultLoopOpts()
 	sweepO := defaultHarvestSweepOpts()
+	arbiterO := defaultArbiterServeOpts()
 	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "Start Aida as an MCP tool server (stdio) and/or HTTP daemon (port 1610)",
@@ -103,6 +104,16 @@ Disable the voice loop with --no-jarvis (useful for headless HTTP-only).`,
 				if err := loopO.validate(); err != nil {
 					return fmt.Errorf("invalid --loop configuration: %w (use the --loop-* flags)", err)
 				}
+				// Lane enforcement is on by default (--loop-arbiter); a
+				// daemon with no lane roster must fail here, at startup,
+				// not silently on the first task it picks up. See
+				// errNoLaneRoster's doc comment for why this stopped
+				// falling back to arbiter.DefaultConfig().
+				if loopO.arbiter {
+					if err := checkLanesFile(cfg); err != nil {
+						return fmt.Errorf("invalid --loop configuration: %w", err)
+					}
+				}
 			}
 			// Validated eagerly (like --loop above) even though the only
 			// current failure mode is a negative duration -- so a bad
@@ -110,6 +121,19 @@ Disable the voice loop with --no-jarvis (useful for headless HTTP-only).`,
 			// the sweep goroutine silently never ticking.
 			if err := sweepO.validate(); err != nil {
 				return fmt.Errorf("invalid --harvest-sweep: %w", err)
+			}
+			// Same eager fail-fast contract as --loop/--harvest-sweep above:
+			// a bad --arbiter-* flag, or --arbiter combined with --loop
+			// (the plan is explicit the two must never dispatch over the
+			// same task at once), fails `aida serve` outright rather than
+			// dying silently inside the scheduler goroutine.
+			if err := validateArbiterServeConfig(arbiterO, enableLoop); err != nil {
+				return fmt.Errorf("invalid --arbiter configuration: %w", err)
+			}
+			if arbiterO.enabled {
+				if err := checkLanesFile(cfg); err != nil {
+					return fmt.Errorf("invalid --arbiter configuration: %w", err)
+				}
 			}
 			// --menu-path wins over profile/config menu.path, which itself
 			// defaults to ~/dev/health/nutrition/menu.yaml (see
@@ -119,7 +143,7 @@ Disable the voice loop with --no-jarvis (useful for headless HTTP-only).`,
 			if menuPathFlag != "" {
 				menuPath = config.ExpandPath(menuPathFlag)
 			}
-			return runHTTPDaemon(cfg, profileName, port, enableJarvis, enableListen, enablePTT, enableLoop, loopO, sweepO, enableLMD, lmdPort, menuPath, menuLANPort)
+			return runHTTPDaemon(cfg, profileName, port, enableJarvis, enableListen, enablePTT, enableLoop, loopO, sweepO, arbiterO, enableLMD, lmdPort, menuPath, menuLANPort)
 		},
 	}
 	cmd.Flags().BoolVar(&httpOnly, "http", false, "force HTTP daemon mode even when stdin is a pipe")
@@ -162,6 +186,7 @@ Disable the voice loop with --no-jarvis (useful for headless HTTP-only).`,
 	cmd.Flags().StringVar(&loopO.sandboxTier, "loop-sandbox", "none", "confine looped agents: none | docker (requires --loop-worktree)")
 	cmd.Flags().StringVar(&loopO.sandboxMemory, "loop-sandbox-memory", "", "sbx microVM memory limit, e.g. 8g (--loop-sandbox docker only)")
 	cmd.Flags().StringVar(&loopO.provisionAida, "loop-provision-aida", "", "path to a prebuilt linux/arm64 aida to copy into the docker sandbox (needed when serve runs outside the aida checkout; build via `make build-linux-arm64`)")
+	cmd.Flags().BoolVar(&loopO.arbiter, "loop-arbiter", true, "consult the capacity view and run each looped attempt on the cheapest eligible lane (see `aida loop --arbiter`); --loop-arbiter=false reverts to the metered aida --agent path")
 
 	// --harvest-sweep runs the Codex/Gemini/Meetily memory-bridge harvest
 	// core (aida brain harvest --tool codex|gemini|meetily) on a periodic
@@ -174,7 +199,43 @@ Disable the voice loop with --no-jarvis (useful for headless HTTP-only).`,
 	// to wire into `aida setup`). HTTP-daemon-mode only; a no-op under
 	// stdio MCP.
 	cmd.Flags().DurationVar(&sweepO.interval, "harvest-sweep", sweepO.interval, "how often to run the Codex/Gemini/Meetily harvest core in the background (0 disables)")
+
+	// --arbiter hosts the overnight scheduler (docs/arbiter-plan.md section
+	// 4) in-process as a background goroutine: it wakes on a plan (nightly,
+	// plus the last hours before a weekly reset), preflights the cheapest
+	// personal lane, builds a wave from tasks carrying a machine verifier,
+	// and runs it through the same arbiter-enforced loop `aida loop
+	// --arbiter` uses. Off by default - unlike --loop-arbiter (enforcement
+	// inside the plain loop, on by default), the scheduler itself is
+	// opt-in. Mutually exclusive with --loop: see
+	// errArbiterLoopConflict's doc comment.
+	cmd.Flags().BoolVar(&arbiterO.enabled, "arbiter", false, "run the overnight scheduler in the background (mutually exclusive with --loop)")
+	cmd.Flags().StringSliceVar(&arbiterO.tags, "arbiter-tag", nil, "only schedule tasks carrying ALL of these tags (repeatable)")
+	cmd.Flags().StringArrayVar(&arbiterO.checks, "arbiter-check", nil, "quality-gate command run after each scheduled attempt; must exit 0 (repeatable); also counts as a task's machine verifier")
+	cmd.Flags().StringVar(&arbiterO.nightlyAt, "arbiter-nightly-at", arbiterO.nightlyAt, "24-hour HH:MM the scheduler always wakes at (local to the burndown overnight timezone)")
+	cmd.Flags().DurationVar(&arbiterO.weeklyDrain, "arbiter-weekly-drain", arbiterO.weeklyDrain, "how far ahead of a 7-day window's reset counts as its own wake trigger")
+	cmd.Flags().BoolVar(&arbiterO.requireVerifier, "arbiter-require-verifier", arbiterO.requireVerifier, "skip a task with no --arbiter-check and no ## Deliverables (no verifier means no unattended run)")
+	cmd.Flags().BoolVar(&arbiterO.worktree, "arbiter-worktree", arbiterO.worktree, "run each scheduled task in an isolated worktree off origin/main")
+	cmd.Flags().BoolVar(&arbiterO.pr, "arbiter-pr", arbiterO.pr, "open a PR per passing scheduled task (implies --arbiter-worktree)")
+	cmd.Flags().StringVar(&arbiterO.reviewer, "arbiter-reviewer", "", "GitHub handle to request review from on scheduled PRs")
+	cmd.Flags().IntVar(&arbiterO.concurrency, "arbiter-concurrency", arbiterO.concurrency, "work up to N scheduled tasks in parallel (requires --arbiter-worktree)")
+	cmd.Flags().DurationVar(&arbiterO.preflightTimeout, "arbiter-preflight-timeout", arbiterO.preflightTimeout, "timeout for the lane-1 preflight turn run before each wave")
+
 	return cmd
+}
+
+// checkLanesFile fails fast when `aida serve --loop` would run with lane
+// enforcement on (--loop-arbiter, true by default) but no lane roster
+// exists yet at cfg.LanesPath(). Enforcement used to fall back to
+// arbiter.DefaultConfig()'s placeholder roster; the 2026-09-25 decision
+// requires a real file instead (see errNoLaneRoster's doc comment), which
+// means a box that has never run `aida arbiter` must refuse to start the
+// daemon's loop rather than spawn every task against fictional lanes.
+// Reuses loadLanesConfig so the error message matches every other
+// lane-roster consumer (`aida arbiter lanes|plan`, `aida loop --arbiter`).
+func checkLanesFile(cfg *config.Config) error {
+	_, err := loadLanesConfig(cfg.LanesPath())
+	return err
 }
 
 // resolveServeFlag picks the effective bool for a serve toggle in priority
@@ -224,7 +285,7 @@ func daemonBaseURL() string {
 	return fmt.Sprintf("http://127.0.0.1:%d", JarvisHTTPPort)
 }
 
-func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvis, enableListen, enablePTT, enableLoop bool, loopO loopOpts, sweepO harvestSweepOpts, enableLMD bool, lmdPort int, menuPath string, menuLANPort int) error {
+func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvis, enableListen, enablePTT, enableLoop bool, loopO loopOpts, sweepO harvestSweepOpts, arbiterO arbiterServeOpts, enableLMD bool, lmdPort int, menuPath string, menuLANPort int) error {
 	b, err := brain.Open(cfg.BrainPath(), profileName, cfg.VoyageKeyEnv(), cfg.Brain.GitHubRepo())
 	if err != nil {
 		return err
@@ -492,6 +553,25 @@ func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvi
 		}()
 	}
 
+	// Overnight scheduler - see serve_arbiter.go. Opt-in via --arbiter;
+	// mutually exclusive with --loop (validated eagerly in RunE, above).
+	// notifier may be nil here (Jarvis disabled) - runArbiterScheduler's
+	// default speak function tolerates that (notify.Notifier.Enqueue is a
+	// safe no-op on a nil receiver), so the scheduler still runs and its
+	// morning summary just never gets spoken, only logged to stderr.
+	var arbiterDone chan struct{}
+	if arbiterO.enabled {
+		arbiterDone = make(chan struct{})
+		go func() {
+			defer close(arbiterDone)
+			fmt.Fprintf(os.Stderr, "🌙 starting arbiter scheduler - tags=%v nightly=%s weekly-drain=%s\n",
+				arbiterO.tags, arbiterO.nightlyAt, arbiterO.weeklyDrain)
+			if err := runArbiterScheduler(ctx, cfg, profileName, arbiterO, notifier, schedulerDeps{}); err != nil && !errors.Is(err, context.Canceled) {
+				fmt.Fprintf(os.Stderr, "⚠️  arbiter scheduler failed - overnight waves will NOT run: %v\n", err)
+			}
+		}()
+	}
+
 	if enableJarvis && enableListen && assistant != nil {
 		au, err := audit.New("")
 		if err != nil {
@@ -641,6 +721,17 @@ func runHTTPDaemon(cfg *config.Config, profileName string, port int, enableJarvi
 		case <-sweepDone:
 		case <-time.After(15 * time.Second):
 			fmt.Fprintln(os.Stderr, "harvest sweep did not stop in 15s; proceeding with shutdown")
+		}
+	}
+	// Same bounded-wait treatment as the loop dispatcher and harvest sweep
+	// above: ctx cancellation propagates into the scheduler's capacity
+	// snapshot, sleep, and (via the arbiter-enforced loopOpts it builds)
+	// any in-flight wave, so this normally returns promptly.
+	if arbiterDone != nil {
+		select {
+		case <-arbiterDone:
+		case <-time.After(15 * time.Second):
+			fmt.Fprintln(os.Stderr, "arbiter scheduler did not stop in 15s; proceeding with shutdown")
 		}
 	}
 	shutdownCtx, sc := context.WithTimeout(context.Background(), 5*time.Second)

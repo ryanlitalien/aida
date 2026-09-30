@@ -64,6 +64,35 @@ type loopOpts struct {
 	recallK       int           // number of brain lessons to seed per iteration
 	perTask       time.Duration
 
+	// arbiter turns on lane enforcement (ADR-0002, superseded 2026-09-25):
+	// each attempt asks the capacity view for the cheapest eligible lane
+	// and runs on it, instead of every task going through the metered
+	// `aida --agent` path. See loop_arbiter.go. On by default; --arbiter
+	// stays as the escape hatch to revert to the old always-metered path.
+	arbiter bool
+	// leaseTTL is how long a claimed task's git-ref lease
+	// (internal/taskstate) lasts before it must be renewed.
+	leaseTTL time.Duration
+	// handoffMaxAge bounds how old a HANDOFF.md may be before
+	// taskstate.Check treats it as stale. 0 disables the age check.
+	handoffMaxAge time.Duration
+	// noLaneWait is how long a --daemon loop sleeps when a round finds no
+	// lane with headroom for any task (ArbiterErrNoLane on every task) -
+	// distinct from the ordinary empty-batch `poll` wait.
+	noLaneWait time.Duration
+	// leaseRemote is the brain repo remote the lease refs
+	// (refs/leases/<slug>) live on.
+	leaseRemote string
+	// slugs is an optional task-slug allowlist: when non-empty, only
+	// these slugs are eligible candidates this round, regardless of
+	// what pickBatch's tag filter would otherwise return. Set by the
+	// overnight scheduler (serve_arbiter.go) so a wave's own
+	// already-decided task set (BuildWave's output) is exactly what
+	// runArbiterLoop dispatches - never a superset the loop re-derives
+	// on its own. Empty (the `aida loop` / `aida serve --loop` default)
+	// means no restriction.
+	slugs []string
+
 	sbxTier      sandbox.Tier // resolved tier (after availability fallback); set in runLoop
 	linuxAidaBin string       // path to a linux/arm64 aida build, provisioned into the docker sandbox; set in runLoop
 	baseRemote   string       // remote the base branch tracks (e.g. "public"); set once by resolveBase
@@ -93,6 +122,11 @@ func defaultLoopOpts() loopOpts {
 		sandboxTier:   "none",
 		recallK:       3,
 		perTask:       450 * time.Second,
+		arbiter:       true,
+		leaseTTL:      15 * time.Minute,
+		handoffMaxAge: 2 * time.Hour,
+		noLaneWait:    5 * time.Minute,
+		leaseRemote:   "origin",
 	}
 }
 
@@ -115,6 +149,9 @@ func (o loopOpts) validate() error {
 	}
 	if tier != sandbox.TierNone && !worktree {
 		return fmt.Errorf("--sandbox %s requires --worktree (the policy confines writes to the task's worktree)", tier)
+	}
+	if o.arbiter && tier == sandbox.TierDocker {
+		return fmt.Errorf("--arbiter with --sandbox docker is not supported yet (the lane runners - claude, codex exec, agy - are host CLIs, not provisioned into the docker sandbox)")
 	}
 	return nil
 }
@@ -157,6 +194,11 @@ func newLoopCmd() *cobra.Command {
 	cmd.Flags().StringVar(&o.provisionAida, "provision-aida", "", "path to a prebuilt linux/arm64 aida to copy into the docker sandbox (default: auto-build from the aida checkout; build via `make build-linux-arm64`)")
 	cmd.Flags().IntVar(&o.recallK, "recall-k", 3, "number of similar brain lessons to seed into each fresh agent")
 	cmd.Flags().DurationVar(&o.perTask, "per-task-timeout", 450*time.Second, "per-iteration timeout for the spawned agent")
+	cmd.Flags().BoolVar(&o.arbiter, "arbiter", true, "consult the capacity view and run each attempt on the cheapest eligible lane; refuse to spawn when no lane has headroom; --arbiter=false reverts to the metered aida --agent path")
+	cmd.Flags().DurationVar(&o.leaseTTL, "lease-ttl", 15*time.Minute, "how long a claimed task's lease lasts before it must be renewed (--arbiter)")
+	cmd.Flags().DurationVar(&o.handoffMaxAge, "handoff-max-age", 2*time.Hour, "max age of a HANDOFF.md before it is considered stale (--arbiter; 0 disables the age check)")
+	cmd.Flags().DurationVar(&o.noLaneWait, "no-lane-wait", 5*time.Minute, "in --daemon mode, how long to sleep when no lane has headroom for any task (--arbiter)")
+	cmd.Flags().StringVar(&o.leaseRemote, "lease-remote", "origin", "the brain repo remote the lease refs (refs/leases/<slug>) live on (--arbiter)")
 	cmd.AddCommand(newLoopPlanCmd())
 	return cmd
 }
@@ -250,6 +292,16 @@ func runLoopCtx(ctx context.Context, o loopOpts) error {
 		budget = cfg.Agent.MaxBudgetUSD
 	}
 	state := &loopState{budgetUSD: budget, maxConsecFail: o.maxConsecFail}
+
+	// --arbiter routes every attempt through the capacity-aware lane picker
+	// instead of the plain `aida --agent` spawn below (ADR-0002). Its round
+	// model differs enough (fetch-and-fast-forward, lease claim, lane pick,
+	// hand-off, ledger) that it lives entirely in loop_arbiter.go rather than
+	// threaded through the loop below - this keeps the --arbiter-off path
+	// byte-for-byte unchanged, since none of the code below it is touched.
+	if o.arbiter {
+		return runArbiterLoop(ctx, cfg, brn, aidaBin, store, profileName, o, state, conc)
+	}
 
 	fmt.Printf("aida loop - profile=%s tags=%v max=%d checks=%v max-fix=%d worktree=%v concurrency=%d budget=$%.2f daemon=%v\n",
 		profileName, o.tags, o.maxIterations, o.checks, o.maxFix, o.worktree, conc, budget, o.daemon)
@@ -484,6 +536,15 @@ func (o loopOpts) processTask(ctx context.Context, brn *brain.Brain, store *jobs
 		return
 	}
 
+	o.finishPassedTask(ctx, brn, store, aidaBin, profileName, task, wt, workDir, lastRunID, state)
+}
+
+// finishPassedTask runs the shared "task passed its gate" tail: open a PR,
+// commit, or just complete the task, then distill a learning either way.
+// Extracted out of processTask so the --arbiter path (loop_arbiter.go) can
+// reuse the exact same PR/commit/complete behavior after its own attempt
+// loop, instead of re-implementing or drifting from it.
+func (o loopOpts) finishPassedTask(ctx context.Context, brn *brain.Brain, store *jobs.Store, aidaBin, profileName string, task *brain.TaskRecord, wt *worktree.Worktree, workDir, lastRunID string, state *loopState) {
 	switch {
 	case o.pr:
 		// Commit on the worktree branch, run the adversarial review panel,

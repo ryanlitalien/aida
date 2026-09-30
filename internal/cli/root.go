@@ -155,6 +155,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newRosterCmd())
 	cmd.AddCommand(newModelsCmd())
 	cmd.AddCommand(newBurndownCmd())
+	cmd.AddCommand(newArbiterCmd())
 	cmd.AddCommand(newLMDCmd())
 	cmd.AddCommand(newFleetCmd())
 

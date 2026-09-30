@@ -372,6 +372,28 @@ func TestServeConfigLMDWhisperModelPath(t *testing.T) {
 	})
 }
 
+func TestLanesPath(t *testing.T) {
+	t.Run("default falls back to ~/.aida/lanes.yaml", func(t *testing.T) {
+		tmpHome := t.TempDir()
+		t.Setenv("HOME", tmpHome)
+		cfg := &Config{}
+		want := filepath.Join(tmpHome, ConfigDir, "lanes.yaml")
+		if got := cfg.LanesPath(); got != want {
+			t.Errorf("LanesPath() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("explicit config value wins and is tilde-expanded", func(t *testing.T) {
+		tmpHome := t.TempDir()
+		t.Setenv("HOME", tmpHome)
+		cfg := &Config{Lanes: LanesConfig{Path: "~/custom-lanes.yaml"}}
+		want := filepath.Join(tmpHome, "custom-lanes.yaml")
+		if got := cfg.LanesPath(); got != want {
+			t.Errorf("LanesPath() = %q, want %q", got, want)
+		}
+	})
+}
+
 func TestSourceHasCapability(t *testing.T) {
 	src := &Source{
 		Capabilities: []string{"sql-query", "partner-lookup", "gmv-analysis"},

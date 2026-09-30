@@ -23,6 +23,16 @@ type taskFrontmatter struct {
 	CompletedAt string   `yaml:"completed_at,omitempty"`
 	IssueNumber int      `yaml:"issue_number,omitempty"`
 	TaskID      int      `yaml:"task_id,omitempty"`
+	// ClaimedBy/LeaseUntil mirror the arbiter's git-ref lease
+	// (internal/taskstate) onto the task file for humans reading it -
+	// docs/arbiter-plan.md section 6: "the task file frontmatter gets
+	// claimed_by: and lease_until: mirrored for humans after the lease
+	// is won (best effort)". The lease ref itself is the source of
+	// truth; these fields can lag or go stale if the mirror write
+	// fails, which is why it's documented as best-effort rather than
+	// authoritative.
+	ClaimedBy  string `yaml:"claimed_by,omitempty"`
+	LeaseUntil string `yaml:"lease_until,omitempty"`
 }
 
 // AddTask creates a new task as a markdown file and indexes it in brain.db.
@@ -250,6 +260,13 @@ type TaskPatch struct {
 	AddTags    []string
 	RemoveTags []string
 	Status     *string // any value from AllStatuses()
+	// ClaimedBy/LeaseUntil mirror an internal/taskstate lease claim onto
+	// the task file - nil leaves the current value unchanged, an empty
+	// string clears it (e.g. on release). Set together in practice, but
+	// independent here so a caller can clear one without touching the
+	// other.
+	ClaimedBy  *string
+	LeaseUntil *string
 }
 
 // UpdateTask applies a patch to a task's markdown file and brain.db entry.
@@ -308,6 +325,12 @@ func (b *Brain) UpdateTask(slug string, patch TaskPatch) (*TaskRecord, error) {
 		}
 		current.Status = *patch.Status
 		current.Completed = willBeCompleted
+	}
+	if patch.ClaimedBy != nil {
+		current.ClaimedBy = *patch.ClaimedBy
+	}
+	if patch.LeaseUntil != nil {
+		current.LeaseUntil = *patch.LeaseUntil
 	}
 
 	if err := writeTaskFile(fullPath, current, body); err != nil {
@@ -692,6 +715,8 @@ func writeTaskFile(path string, record *TaskRecord, body string) error {
 		CompletedAt: record.CompletedAt,
 		IssueNumber: record.IssueNumber,
 		TaskID:      record.TaskID,
+		ClaimedBy:   record.ClaimedBy,
+		LeaseUntil:  record.LeaseUntil,
 	}
 
 	yamlBytes, err := yaml.Marshal(fm)
@@ -765,6 +790,8 @@ func parseTaskFile(path string) (*TaskRecord, string, error) {
 		Description: title,
 		IssueNumber: fm.IssueNumber,
 		TaskID:      fm.TaskID,
+		ClaimedBy:   fm.ClaimedBy,
+		LeaseUntil:  fm.LeaseUntil,
 	}
 
 	return record, body, nil

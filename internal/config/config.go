@@ -35,6 +35,7 @@ type Config struct {
 	Training      TrainingConfig     `yaml:"training,omitempty"`
 	Models        ModelsConfig       `yaml:"models,omitempty"`
 	Burndown      BurndownConfig     `yaml:"burndown,omitempty"`
+	Lanes         LanesConfig        `yaml:"lanes,omitempty"`
 	// IDPatterns configures the identifier shapes ExtractIDsFromText (see
 	// ari_extractor.go) recognizes when scanning free text -- e.g. a docs
 	// page listing per-environment resource IDs -- for semantic key
@@ -166,6 +167,15 @@ type BurndownConfig struct {
 	Path string `yaml:"path,omitempty"` // defaults to ~/.aida/burndown.yaml
 }
 
+// LanesConfig holds settings for the arbiter's lane roster
+// (`internal/arbiter` -- which lane a task may run on, on what runner and
+// credential, gated by data class). Mirrors BurndownConfig's shape
+// exactly: a single configurable path with a sane default, hand-maintained
+// state alongside the models roster and burndown floors it's read next to.
+type LanesConfig struct {
+	Path string `yaml:"path,omitempty"` // defaults to ~/.aida/lanes.yaml
+}
+
 // EmbeddingConfig holds embedding provider settings. Model and output
 // dimension are deliberately NOT config here -- both are pinned constants
 // in internal/brain/embeddings.go (voyageModel, voyageOutputDimension)
@@ -281,6 +291,16 @@ func (c *Config) BurndownPath() string {
 		return expandPath(c.Burndown.Path)
 	}
 	return filepath.Join(Dir(), "burndown.yaml")
+}
+
+// LanesPath returns the resolved arbiter lane-roster YAML path. Mirrors
+// BurndownPath's shape exactly: an explicit config value wins (tilde-
+// expanded), else the default of ~/.aida/lanes.yaml.
+func (c *Config) LanesPath() string {
+	if c.Lanes.Path != "" {
+		return expandPath(c.Lanes.Path)
+	}
+	return filepath.Join(Dir(), "lanes.yaml")
 }
 
 // PRWorkRepoRoot returns the configured repo root for pr_work jobs, with

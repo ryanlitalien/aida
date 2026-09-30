@@ -1,0 +1,113 @@
+# Arbiter lane roster. Copy to ~/.aida/lanes.yaml and edit.
+#
+# This is a PLACEHOLDER roster: vendor-shaped example lanes, not any real
+# household's setup. It names no machine, no company, and no person --
+# swap in your own accounts, seats, and hostnames before using it. Load
+# requires a real file at ~/.aida/lanes.yaml (config.Config.LanesPath);
+# there is no silent fallback to this example at runtime.
+#
+# Six execution lanes, cheapest first (docs/arbiter-plan.md section 3, the
+# 2026-09-17 design conversation). A lane is a machine + runtime +
+# credential, gated by an explicit `data_classes:` allowlist -- there is
+# no wildcard; a new data class must be added to a lane on purpose.
+#
+# `provider:` must match a provider's `label:` field in ~/.aida/models.yaml
+# exactly (e.g. "Anthropic / Claude") -- that's how internal/arbiter's
+# LaneCapacity matches this lane's `windows:` against internal/burndown's
+# live rows. Empty `provider:` means "no live probe" -- only usable with
+# `allow_unprobed: true`.
+#
+# This file is the source of truth for internal/arbiter.DefaultConfig --
+# a test in internal/arbiter asserts Load(this file) equals DefaultConfig
+# after Validate, so the two can never silently drift apart.
+lanes:
+  - id: claude-personal
+    order: 1
+    provider: "Anthropic / Claude"
+    windows: ["5h", "7d"]
+    data_classes: [personal, games, public]
+    runner: claude
+    auth: subscription
+    models:
+      executor: claude-sonnet-5
+      thinker: claude-opus-5
+      trivial: claude-haiku-4-5-20251001
+    note: >-
+      Example: a personal subscription plan, claude CLI, personal config
+      dir. Cheapest lane -- always tried first.
+
+  - id: claude-company
+    order: 2
+    provider: "Anthropic / Claude (company seat)"
+    windows: ["5h", "7d"]
+    data_classes: [butterstack, public]
+    runner: claude
+    auth: subscription
+    config_dir: "~/.claude-company"
+    models:
+      executor: claude-sonnet-5
+      thinker: claude-opus-5
+    note: >-
+      Example: a second Claude seat on a company account, claude CLI with
+      CLAUDE_CONFIG_DIR=~/.claude-company. Primary company-data lane.
+
+  - id: gemini
+    order: 3
+    provider: "Google / Gemini"
+    windows: ["5h", "7d"]
+    data_classes: [personal, games, public]
+    runner: exec
+    auth: subscription
+    command: ["agy", "-i", "--model", "{model}", "{prompt}"]
+    models:
+      executor: gemini-3.8-flash
+      thinker: gemini-3.1-pro
+    note: >-
+      Example: agy -i (never -p, 5-minute cap). Serves every role -- the
+      2026-09-08 benchmark found Flash weak in agent loops, so this
+      default re-tests that rather than assuming it still holds.
+
+  - id: codex
+    order: 4
+    provider: "OpenAI / ChatGPT + Codex"
+    windows: ["5h", "7d"]
+    data_classes: [personal, games, public]
+    runner: exec
+    auth: subscription
+    command: ["codex", "exec", "-s", "workspace-write", "--model", "{model}", "{prompt}"]
+    models:
+      executor: gpt-5.6-terra
+      thinker: gpt-6-sol
+    note: >-
+      Example: codex exec -s workspace-write, stdin closed. Banked resets
+      are manual levers, not automatic.
+
+  - id: proxy-model
+    order: 5
+    data_classes: [butterstack, games, public]
+    runner: claude
+    auth: api-key
+    allow_unprobed: true
+    env:
+      ANTHROPIC_BASE_URL: "http://localhost:4000"
+    models:
+      executor: qwen
+      thinker: qwen
+    note: >-
+      Example: a model behind a local API-key proxy (a self-hosted model,
+      a second vendor, whatever). No live probe -- allow_unprobed is the
+      only way this lane is ever eligible.
+
+  - id: litellm
+    order: 6
+    provider: "LiteLLM proxy"
+    spend: true
+    data_classes: [butterstack, games, public]
+    runner: aida-agent
+    auth: api-key
+    models:
+      executor: claude-sonnet-5
+      thinker: claude-opus-5
+    note: >-
+      Example: real dollars, last. aida --agent via LiteLLM budget keys.
+      Never carries personal data.
