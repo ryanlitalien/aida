@@ -6,6 +6,10 @@ If another PR merges first and claims the version heading you were targeting, re
 
 On every merge to `main`, the `release` job re-computes the same next version, tags it, and publishes a GitHub release using that version's changelog section as the release notes.
 
+## v1.15.0
+
+- README: new "Picking the lane: the arbiter" section after the autonomous loop, covering how a task's data class and `~/.aida/lanes.yaml` pick the lane, where headroom comes from (`aida models`, `aida burndown capacity`), what happens when a lane runs dry (HANDOFF.md at 90 percent, fail-open limit signals, the git-ref lease), and the five commands to go from a copied `examples/lanes.yaml` to an overnight wave. The Commands block gains an arbiter and capacity group.
+
 ## v1.14.0
 
 - New `internal/arbiter` package: a lane picker that decides which credential and which CLI a task runs on, cheapest eligible lane first. The lane roster lives in `~/.aida/lanes.yaml` (`config.Config.LanesPath`, override via `lanes.path`; copy `examples/lanes.yaml`), one entry per lane with the CLI it runs (`claude`, `codex exec`, `agy`, or the metered `aida --agent` path), its allowed data classes, and its model. `arbiter.Pick` combines the burn-down capacity view (`models.yaml` plus `burndown.yaml` headroom per window) with per-lane rate-limit signals from `~/.aida/arbiter/lane-state.json`, and returns a lane, a model, a near-exhaustion flag, and a reason string per rejected lane. A task's tags map to a data class (ADR-0003): ButterStack tags are `butterstack`, `project:plt` and other game tags are `games`, everything else is `personal`, and a lane only accepts the classes it lists, so company work never lands on the personal Max or Codex login and personal work never lands on the company seat. A lane with no capacity rows is ineligible unless it sets `allow_unprobed: true`. When no lane is eligible the arbiter waits and logs why; it never picks new spend on its own.

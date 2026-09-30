@@ -262,6 +262,26 @@ Deep dive: [`docs/notes/loop-internals.md`](docs/notes/loop-internals.md).
 Lifecycle diagram:
 [`docs/diagrams/loop-lifecycle.md`](docs/diagrams/loop-lifecycle.md).
 
+## Picking the lane: the arbiter
+
+Every loop attempt has to run somewhere: a subscription CLI, a company seat, a metered API key. The arbiter decides which, per task, from live usage, so an unattended run drains the cheap windows first and never spends new money on its own.
+
+**How a lane is picked.** A task's tags map to a data class (`personal`, `butterstack`, `games`, `public`; untagged is `personal`). Each lane in `~/.aida/lanes.yaml` is a machine, a runtime, and a credential, with an explicit `data_classes:` allowlist, a `provider:` that names a row in `~/.aida/models.yaml`, and the models it runs for each role. `arbiter.Pick` walks the lanes cheapest first and takes the first one that accepts the task's class, has headroom above its floor on every window, and is not currently signalled empty. Every rejected lane carries a reason, so `aida arbiter plan` can show you why a task landed where it did. No lane may name Fable as its executor, and a subscription lane only ever runs through the vendor's own CLI.
+
+**Where headroom comes from.** `aida models` probes each provider's live usage (`~/.aida/models.yaml` lists the providers, plans, and nicknames). `aida burndown capacity` turns that into a floor per window (from `~/.aida/burndown.yaml`, or the observed burn pace once there is one) and the headroom above it. The arbiter reads that view; it never probes on its own.
+
+**What happens when a lane runs dry.** At 90 percent of any window the harness makes the model write a `HANDOFF.md` before it stops, so the next lane resumes the task instead of restarting it. A usage-limit refusal, even an ambiguous one, marks the lane empty until its reset and moves the task on without spending a fix attempt. Each task is claimed with a lease that is a git ref on the brain remote, so two machines never work the same task.
+
+```bash
+cp examples/lanes.yaml ~/.aida/lanes.yaml   # then edit: your seats, your hosts
+aida arbiter lanes --lint                   # roster loads and validates
+aida arbiter plan --tag <tag>               # dry run: class, lane, model, reason per task
+aida loop --tag <tag> --check "make test"   # lane enforcement is on by default
+aida serve --arbiter                        # overnight waves at 23:00 and before weekly resets
+```
+
+Lane enforcement is on by default; `--arbiter=false` (or `--loop-arbiter=false` on `aida serve`) reverts one invocation to the plain `aida --agent` path. `/dashboard` shows the scheduler state, the last wave, and any lanes marked empty. Decisions and their reasons: [`docs/adr/`](docs/adr/). Kick-off recipes: [`docs/arbiter-usage.md`](docs/arbiter-usage.md).
+
 ## Portability: code, config, and memory are three repos
 
 ```bash
@@ -331,6 +351,14 @@ aida jarvis greet                       # TTS smoke test
 # Autonomous loop
 aida loop plan "<goal>" --tag <tag>     # decompose a goal into tasks
 aida loop --tag <tag> --check "<cmd>"    # drive the loop with a quality gate
+
+# Arbiter (which lane a task runs on) and capacity
+aida arbiter lanes --lint                # validate ~/.aida/lanes.yaml
+aida arbiter plan --tag <tag>            # dry run: class, lane, model, reason per task
+aida arbiter status                      # scheduler state, last wave, lane marks
+aida models                              # live usage per provider from ~/.aida/models.yaml
+aida burndown capacity                   # floor and headroom per window
+aida serve --arbiter                     # overnight scheduler in the daemon
 
 # Library
 aida lint                                # validate library sources
